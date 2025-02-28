@@ -1,0 +1,56 @@
+DownloadManager/
+├── CMakeLists.txt                 - Main build configuration
+├── main.cpp                       - Program entry point
+├── include/                       - Header files
+│   ├── core/                      - Core components
+│   │   ├── DownloadManager.h      - Main manager class
+│   │   ├── DownloadTask.h         - Individual download task
+│   │   ├── DownloadQueue.h        - Download scheduler
+│   │   ├── HttpClient.h           - Network operations
+│   │   ├── FileManager.h          - File system operations
+│   │   ├── SegmentDownloader.h    - Multi-segment download
+│   │   ├── Throttler.h            - Speed limiting
+│   │   └── Settings.h             - Application settings
+│   ├── ui/                        - User interface
+│   │   ├── MainWindow.h           - Main application window
+│   │   ├── DownloadItemWidget.h   - UI for a download item
+│   │   ├── AddDownloadDialog.h    - Dialog for adding downloads
+│   │   ├── SettingsDialog.h       - Settings configuration
+│   │   ├── ProgressBar.h          - Custom progress bar
+│   │   └── SpeedLabel.h           - Download speed display
+│   └── utils/                     - Utilities
+│       ├── UrlParser.h            - URL handling
+│       ├── HashCalculator.h       - File hash verification
+│       ├── Logger.h               - Logging facility
+│       └── FileUtils.h            - File utility functions
+├── src/                           - Implementation files
+│   ├── core/                      - Core implementations
+│   │   ├── DownloadManager.cpp
+│   │   ├── DownloadTask.cpp
+│   │   ├── DownloadQueue.cpp
+│   │   ├── HttpClient.cpp
+│   │   ├── FileManager.cpp
+│   │   ├── SegmentDownloader.cpp
+│   │   ├── Throttler.cpp
+│   │   └── Settings.cpp
+│   ├── ui/                        - UI implementations
+│   │   ├── MainWindow.cpp
+│   │   ├── DownloadItemWidget.cpp
+│   │   ├── AddDownloadDialog.cpp
+│   │   ├── SettingsDialog.cpp
+│   │   ├── ProgressBar.cpp
+│   │   └── SpeedLabel.cpp
+│   └── utils/                     - Utility implementations
+│       ├── UrlParser.cpp
+│       ├── HashCalculator.cpp
+│       ├── Logger.cpp
+│       └── FileUtils.cpp
+├── resources/                     - Application resources
+│   ├── icons/                     - UI icons
+│   ├── styles/                    - CSS styles
+│   └── translations/              - Internationalization
+└── tests/                         - Unit tests
+    ├── CMakeLists.txt             - Test build configuration
+    ├── TestDownloadTask.cpp
+    ├── TestHttpClient.cpp
+    └── TestUrlParser.cpp

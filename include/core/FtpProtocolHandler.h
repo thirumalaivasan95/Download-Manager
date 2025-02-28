@@ -157,7 +157,44 @@ public:
      */
     bool supportsUrl(const std::string& url) const override;
     
+    /**
+     * @brief Check if a server supports resume
+     * 
+     * @param url The URL to check
+     * @param options The protocol options
+     * @return true if resume is supported, false otherwise
+     */
+    bool supportsResume(const std::string& url, const ProtocolOptions& options);
+    
+    /**
+     * @brief Get the modification time of a file
+     * 
+     * @param url The URL
+     * @param options The protocol options
+     * @return std::string The modification time as a string, or empty if unknown
+     */
+    std::string getModificationTime(const std::string& url, const ProtocolOptions& options);
+    
 private:
+    /**
+     * @brief Download thread function
+     * 
+     * @param url The URL to download
+     * @param outputFile The output file path
+     * @param task The download task
+     * @param options The protocol options
+     * @param progressCallback Progress callback
+     * @param errorCallback Error callback
+     * @param statusCallback Status callback
+     */
+    void downloadThread(const std::string& url, 
+                       const std::string& outputFile,
+                       std::shared_ptr<DownloadTask> task,
+                       ProtocolOptions options,
+                       ProtocolProgressCallback progressCallback,
+                       ProtocolErrorCallback errorCallback,
+                       ProtocolStatusCallback statusCallback);
+    
     /**
      * @brief Configure CURL handle for FTP
      * 
@@ -169,44 +206,52 @@ private:
     bool configureCurl(CURL* curl, const std::string& url, const ProtocolOptions& options);
     
     /**
-     * @brief Get active CURL handle for a task
+     * @brief Handle FTP response
      * 
-     * @param taskId The task ID
-     * @return CURL* The CURL handle, or nullptr if not found
+     * @param code The FTP response code
+     * @param message The FTP response message
+     * @param url The URL
+     * @param errorCallback Optional error callback
+     * @return true if response is valid, false otherwise
      */
-    CURL* getActiveCurl(const std::string& taskId);
+    bool handleFtpResponse(int code, 
+                         const std::string& message, 
+                         const std::string& url,
+                         ProtocolErrorCallback errorCallback = nullptr);
     
     /**
      * @brief Parse directory listing
      * 
      * @param listing The directory listing
      * @param baseUrl The base URL
-     * @return std::vector<DirectoryEntry> The parsed directory entries
+     * @return std::vector<DirectoryEntry> The directory entries
      */
     std::vector<DirectoryEntry> parseDirectoryListing(const std::string& listing, 
                                                     const std::string& baseUrl);
     
     /**
-     * @brief Parse file information from listing line
+     * @brief Parse directory entry from line
      * 
-     * @param line The listing line
+     * @param line The line to parse
      * @param baseUrl The base URL
-     * @return DirectoryEntry The parsed directory entry
+     * @return DirectoryEntry The directory entry
      */
-    DirectoryEntry parseListingLine(const std::string& line, const std::string& baseUrl);
+    DirectoryEntry parseDirectoryEntry(const std::string& line, const std::string& baseUrl);
     
-    // CURL callback functions
-    static size_t writeCallback(void* contents, size_t size, size_t nmemb, void* userp);
-    static size_t headerCallback(void* contents, size_t size, size_t nmemb, void* userp);
-    static int progressCallback(void* clientp, curl_off_t dltotal, curl_off_t dlnow, 
-                               curl_off_t ultotal, curl_off_t ulnow);
+    /**
+     * @brief Extract filename from URL
+     * 
+     * @param url The URL
+     * @return std::string The filename
+     */
+    std::string extractFilename(const std::string& url) const;
     
     // Member variables
-    std::map<std::string, CURL*> activeHandles_;
-    std::map<std::string, std::string> userPassCache_;
-    std::map<std::string, std::pair<ProtocolProgressCallback, void*>> progressCallbacks_;
-    std::atomic<bool> initialized_;
+    std::map<std::string, std::shared_ptr<std::thread>> downloadThreads_;
+    std::map<std::string, CURL*> activeCurlHandles_;
+    std::map<std::string, std::atomic<bool>> cancelFlags_;
     mutable std::mutex mutex_;
+    bool initialized_ = false;
 };
 
 } // namespace core

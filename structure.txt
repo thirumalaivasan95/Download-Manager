@@ -1,56 +1,229 @@
 DownloadManager/
-├── CMakeLists.txt                 - Main build configuration
-├── main.cpp                       - Program entry point
-├── include/                       - Header files
-│   ├── core/                      - Core components
-│   │   ├── DownloadManager.h      - Main manager class
-│   │   ├── DownloadTask.h         - Individual download task
-│   │   ├── DownloadQueue.h        - Download scheduler
-│   │   ├── HttpClient.h           - Network operations
-│   │   ├── FileManager.h          - File system operations
-│   │   ├── SegmentDownloader.h    - Multi-segment download
-│   │   ├── Throttler.h            - Speed limiting
-│   │   └── Settings.h             - Application settings
-│   ├── ui/                        - User interface
-│   │   ├── MainWindow.h           - Main application window
-│   │   ├── DownloadItemWidget.h   - UI for a download item
-│   │   ├── AddDownloadDialog.h    - Dialog for adding downloads
-│   │   ├── SettingsDialog.h       - Settings configuration
-│   │   ├── ProgressBar.h          - Custom progress bar
-│   │   └── SpeedLabel.h           - Download speed display
-│   └── utils/                     - Utilities
-│       ├── UrlParser.h            - URL handling
-│       ├── HashCalculator.h       - File hash verification
-│       ├── Logger.h               - Logging facility
-│       └── FileUtils.h            - File utility functions
-├── src/                           - Implementation files
-│   ├── core/                      - Core implementations
+├── CMakeLists.txt                           # Main build configuration
+├── README.md                                # Project documentation
+├── LICENSE                                  # License file
+├── .gitignore                               # Git ignore file
+├── main.cpp                                 # Program entry point
+├── resources/                               # Resource files
+│   ├── icons/                               # Application icons
+│   │   ├── add.png                          # Add download icon
+│   │   ├── pause.png                        # Pause icon
+│   │   ├── resume.png                       # Resume icon
+│   │   ├── cancel.png                       # Cancel icon
+│   │   ├── remove.png                       # Remove icon
+│   │   ├── settings.png                     # Settings icon
+│   │   ├── app.png                          # Application icon
+│   │   ├── batch.png                        # Batch download icon
+│   │   ├── schedule.png                     # Schedule icon
+│   │   ├── crawler.png                      # Crawler icon
+│   │   ├── statistics.png                   # Statistics icon
+│   │   ├── plugin.png                       # Plugin icon
+│   │   └── file_types/                      # File type icons
+│   ├── ui/                                  # UI resource files
+│   │   ├── stylesheets/                     # CSS style sheets
+│   │   ├── layouts/                         # UI layout files
+│   │   └── themes/                          # Theme files
+│   ├── translations/                        # Translation files
+│   │   ├── downloadmanager_en.ts            # English translation
+│   │   ├── downloadmanager_fr.ts            # French translation
+│   │   ├── downloadmanager_de.ts            # German translation
+│   │   ├── downloadmanager_es.ts            # Spanish translation
+│   │   ├── downloadmanager_ja.ts            # Japanese translation
+│   │   └── downloadmanager_zh.ts            # Chinese translation
+│   └── resources.qrc                        # Qt resource file
+├── include/                                 # Header files
+│   ├── core/                                # Core functionality
+│   │   ├── DownloadManager.h                # Download manager
+│   │   ├── DownloadTask.h                   # Download task
+│   │   ├── DownloadQueue.h                  # Download queue
+│   │   ├── SegmentDownloader.h              # Multi-segment downloader
+│   │   ├── HttpClient.h                     # HTTP client
+│   │   ├── FileManager.h                    # File operations
+│   │   ├── Settings.h                       # Application settings
+│   │   ├── Throttler.h                      # Bandwidth throttling
+│   │   ├── BatchDownloader.h                # Batch download manager
+│   │   ├── WebsiteCrawler.h                 # Website crawler
+│   │   ├── MediaHandler.h                   # Media file handling
+│   │   ├── DownloadScheduler.h              # Download scheduler
+│   │   ├── Statistics.h                     # Statistics manager
+│   │   ├── NetworkMonitor.h                 # Network monitoring
+│   │   ├── ProtocolHandler.h                # Protocol handler interface
+│   │   ├── HttpProtocolHandler.h            # HTTP protocol implementation
+│   │   ├── FtpProtocolHandler.h             # FTP protocol implementation
+│   │   └── TorrentProtocolHandler.h         # BitTorrent protocol implementation
+│   ├── ui/                                  # User interface
+│   │   ├── MainWindow.h                     # Main application window
+│   │   ├── DownloadItemWidget.h             # Download item widget
+│   │   ├── AddDownloadDialog.h              # Add download dialog
+│   │   ├── BatchDownloadDialog.h            # Batch download dialog
+│   │   ├── SettingsDialog.h                 # Settings dialog
+│   │   ├── SchedulerDialog.h                # Scheduler dialog
+│   │   ├── StatisticsDialog.h               # Statistics dialog
+│   │   ├── CrawlerDialog.h                  # Website crawler dialog
+│   │   ├── PluginManagerDialog.h            # Plugin manager dialog
+│   │   ├── ProgressBar.h                    # Custom progress bar
+│   │   ├── SpeedLabel.h                     # Speed display label
+│   │   ├── ChartWidget.h                    # Chart widget for statistics
+│   │   └── NotificationSystem.h             # System notifications
+│   ├── cli/                                 # Command line interface
+│   │   ├── CommandLineInterface.h           # CLI manager
+│   │   ├── CommandProcessor.h               # Command processor
+│   │   └── ScriptEngine.h                   # Script execution engine
+│   ├── plugin/                              # Plugin system
+│   │   ├── PluginSystem.h                   # Plugin framework
+│   │   ├── PluginManager.h                  # Plugin manager
+│   │   ├── PluginLoader.h                   # Dynamic plugin loader
+│   │   └── plugins/                         # Built-in plugins
+│   │       ├── ArchiveExtractor.h           # Archive extraction plugin
+│   │       ├── MediaConverter.h             # Media conversion plugin
+│   │       ├── SiteIntegration.h            # Website integration plugin
+│   │       └── AutoOrganizer.h              # File organization plugin
+│   └── utils/                               # Utility classes
+│       ├── UrlParser.h                      # URL parsing utilities
+│       ├── FileUtils.h                      # File system utilities
+│       ├── Logger.h                         # Logging system
+│       ├── HashCalculator.h                 # File hash calculator
+│       ├── ConfigManager.h                  # Configuration manager
+│       ├── StringUtils.h                    # String manipulation utilities
+│       ├── TimeUtils.h                      # Time-related utilities
+│       └── DatabaseManager.h                # Database access
+├── src/                                     # Implementation files
+│   ├── core/                                # Core implementations
 │   │   ├── DownloadManager.cpp
 │   │   ├── DownloadTask.cpp
 │   │   ├── DownloadQueue.cpp
+│   │   ├── SegmentDownloader.cpp
 │   │   ├── HttpClient.cpp
 │   │   ├── FileManager.cpp
-│   │   ├── SegmentDownloader.cpp
+│   │   ├── Settings.cpp
 │   │   ├── Throttler.cpp
-│   │   └── Settings.cpp
-│   ├── ui/                        - UI implementations
+│   │   ├── BatchDownloader.cpp
+│   │   ├── WebsiteCrawler.cpp
+│   │   ├── MediaHandler.cpp
+│   │   ├── DownloadScheduler.cpp
+│   │   ├── Statistics.cpp
+│   │   ├── NetworkMonitor.cpp
+│   │   ├── ProtocolHandler.cpp
+│   │   ├── HttpProtocolHandler.cpp
+│   │   ├── FtpProtocolHandler.cpp
+│   │   └── TorrentProtocolHandler.cpp
+│   ├── ui/                                  # UI implementations
 │   │   ├── MainWindow.cpp
 │   │   ├── DownloadItemWidget.cpp
 │   │   ├── AddDownloadDialog.cpp
+│   │   ├── BatchDownloadDialog.cpp
 │   │   ├── SettingsDialog.cpp
+│   │   ├── SchedulerDialog.cpp
+│   │   ├── StatisticsDialog.cpp
+│   │   ├── CrawlerDialog.cpp
+│   │   ├── PluginManagerDialog.cpp
 │   │   ├── ProgressBar.cpp
-│   │   └── SpeedLabel.cpp
-│   └── utils/                     - Utility implementations
+│   │   ├── SpeedLabel.cpp
+│   │   ├── ChartWidget.cpp
+│   │   └── NotificationSystem.cpp
+│   ├── cli/                                 # CLI implementations
+│   │   ├── CommandLineInterface.cpp
+│   │   ├── CommandProcessor.cpp
+│   │   └── ScriptEngine.cpp
+│   ├── plugin/                              # Plugin implementations
+│   │   ├── PluginSystem.cpp
+│   │   ├── PluginManager.cpp
+│   │   ├── PluginLoader.cpp
+│   │   └── plugins/
+│   │       ├── ArchiveExtractor.cpp
+│   │       ├── MediaConverter.cpp
+│   │       ├── SiteIntegration.cpp
+│   │       └── AutoOrganizer.cpp
+│   └── utils/                               # Utility implementations
 │       ├── UrlParser.cpp
-│       ├── HashCalculator.cpp
+│       ├── FileUtils.cpp
 │       ├── Logger.cpp
-│       └── FileUtils.cpp
-├── resources/                     - Application resources
-│   ├── icons/                     - UI icons
-│   ├── styles/                    - CSS styles
-│   └── translations/              - Internationalization
-└── tests/                         - Unit tests
-    ├── CMakeLists.txt             - Test build configuration
-    ├── TestDownloadTask.cpp
-    ├── TestHttpClient.cpp
-    └── TestUrlParser.cpp
+│       ├── HashCalculator.cpp
+│       ├── ConfigManager.cpp
+│       ├── StringUtils.cpp
+│       ├── TimeUtils.cpp
+│       └── DatabaseManager.cpp
+├── tests/                                   # Test files
+│   ├── CMakeLists.txt                       # Test build configuration
+│   ├── unit/                                # Unit tests
+│   │   ├── core/                            # Core component tests
+│   │   │   ├── DownloadTaskTest.cpp
+│   │   │   ├── HttpClientTest.cpp
+│   │   │   ├── SegmentDownloaderTest.cpp
+│   │   │   └── ProtocolHandlerTest.cpp
+│   │   ├── ui/                              # UI component tests
+│   │   │   └── ProgressBarTest.cpp
+│   │   ├── cli/                             # CLI component tests
+│   │   │   └── CommandProcessorTest.cpp
+│   │   ├── plugin/                          # Plugin system tests
+│   │   │   └── PluginManagerTest.cpp
+│   │   └── utils/                           # Utility tests
+│   │       ├── UrlParserTest.cpp
+│   │       ├── FileUtilsTest.cpp
+│   │       └── HashCalculatorTest.cpp
+│   ├── integration/                         # Integration tests
+│   │   ├── download_tests.cpp               # Download integration tests
+│   │   ├── protocol_tests.cpp               # Protocol integration tests
+│   │   └── plugin_tests.cpp                 # Plugin integration tests
+│   └── performance/                         # Performance tests
+│       ├── download_benchmark.cpp           # Download performance tests
+│       ├── crawler_benchmark.cpp            # Crawler performance tests
+│       └── file_benchmark.cpp               # File operation benchmarks
+├── docs/                                    # Documentation
+│   ├── api/                                 # API documentation
+│   │   ├── core.md                          # Core API documentation
+│   │   ├── ui.md                            # UI API documentation
+│   │   ├── cli.md                           # CLI API documentation
+│   │   └── plugin.md                        # Plugin API documentation
+│   ├── user/                                # User documentation
+│   │   ├── installation.md                  # Installation guide
+│   │   ├── getting_started.md               # Getting started guide
+│   │   ├── basic_usage.md                   # Basic usage guide
+│   │   └── advanced_features.md             # Advanced features guide
+│   ├── developer/                           # Developer documentation
+│   │   ├── building.md                      # Building from source
+│   │   ├── architecture.md                  # Architecture overview
+│   │   ├── plugin_dev.md                    # Plugin development
+│   │   └── contributing.md                  # Contribution guide
+│   └── design/                              # Design documentation
+│       ├── architecture.md                  # Architecture design
+│       ├── class_diagrams.md                # Class diagrams
+│       ├── sequence_diagrams.md             # Sequence diagrams
+│       └── requirements.md                  # Requirements specification
+├── examples/                                # Example code
+│   ├── plugins/                             # Example plugins
+│   │   ├── custom_protocol/                 # Custom protocol plugin
+│   │   ├── file_analyzer/                   # File analysis plugin
+│   │   └── cloud_uploader/                  # Cloud upload plugin
+│   ├── scripts/                             # Example scripts
+│   │   ├── batch_download.script            # Batch download script
+│   │   ├── scheduled_download.script        # Scheduled download script
+│   │   └── website_mirror.script            # Website mirroring script
+│   └── extensions/                          # Example extensions
+│       ├── browser_integration/             # Browser integration
+│       ├── custom_ui/                       # Custom UI extension
+│       └── notification_extension/          # Custom notification extension
+├── tools/                                   # Development tools
+│   ├── build_scripts/                       # Build scripts
+│   │   ├── build_windows.bat                # Windows build script
+│   │   ├── build_linux.sh                   # Linux build script
+│   │   └── build_macos.sh                   # macOS build script
+│   ├── installers/                          # Installer scripts
+│   │   ├── windows/                         # Windows installer
+│   │   ├── linux/                           # Linux installer
+│   │   └── macos/                           # macOS installer
+│   └── packaging/                           # Packaging scripts
+│       ├── deb/                             # Debian package
+│       ├── rpm/                             # RPM package
+│       ├── dmg/                             # macOS package
+│       └── exe/                             # Windows package
+└── third_party/                             # Third-party libraries
+    ├── curl/                                # libcurl for HTTP
+    ├── openssl/                             # OpenSSL for encryption
+    ├── sqlite/                              # SQLite for storage
+    ├── zlib/                                # zlib for compression
+    ├── jsoncpp/                             # JSON parsing
+    ├── libtorrent/                          # BitTorrent support
+    └── qt/                                  # Qt library for UI
+
+Now update the C++ Download Manager - Project Structure, and forecast the complete development, and generate accordingly, and continue building further, for example, this is the sample structure:

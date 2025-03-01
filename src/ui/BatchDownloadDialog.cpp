@@ -1,9 +1,9 @@
-#include "../../include/ui/BatchDownloadDialog.h"
-#include "../../include/utils/Logger.h"
-#include "../../include/utils/FileUtils.h"
-#include "../../include/utils/StringUtils.h"
-#include "../../include/core/BatchDownloader.h"
-#include "../../include/core/DownloadManager.h"
+#include "include/ui/BatchDownloadDialog.h"
+#include "include/core/BatchDownloader.h"
+#include "include/core/DownloadManager.h"
+#include "include/utils/Logger.h"
+#include "include/utils/FileUtils.h"
+#include "include/utils/UrlParser.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -13,42 +13,43 @@
 #include <QPushButton>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <QGroupBox>
-#include <QLineEdit>
+#include <QRadioButton>
+#include <QButtonGroup>
 #include <QSpinBox>
-#include <QCheckBox>
 #include <QComboBox>
+#include <QCheckBox>
+#include <QTabWidget>
 #include <QTextEdit>
 #include <QListWidget>
-#include <QListWidgetItem>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QHeaderView>
-#include <QTabWidget>
 #include <QProgressBar>
-#include <QTimer>
+#include <QInputDialog>
+#include <QApplication>
+#include <QClipboard>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QMimeData>
 #include <QUrl>
-#include <QDialogButtonBox>
-#include <QIcon>
-#include <QPainter>
-#include <QFont>
-#include <QApplication>
-#include <QClipboard>
 #include <QShortcut>
 #include <QKeySequence>
+#include <QGroupBox>
+#include <QTimer>
+#include <QIcon>
 
-namespace DownloadManager {
-namespace UI {
+namespace dm {
+namespace ui {
 
-BatchDownloadDialog::BatchDownloadDialog(QWidget* parent) : QDialog(parent) {
+BatchDownloadDialog::BatchDownloadDialog(QWidget* parent)
+    : QDialog(parent)
+    , downloadManager_(dm::core::DownloadManager::getInstance())
+{
     setWindowTitle(tr("Batch Download"));
     setMinimumSize(800, 600);
     
     // Create UI
-    createUI();
+    setupUi();
     
     // Connect signals
     connectSignals();
@@ -61,18 +62,18 @@ BatchDownloadDialog::BatchDownloadDialog(QWidget* parent) : QDialog(parent) {
 }
 
 BatchDownloadDialog::~BatchDownloadDialog() {
-    // Stop timer
-    if (m_updateTimer) {
-        m_updateTimer->stop();
+    // Stop timer if exists
+    if (updateTimer_) {
+        updateTimer_->stop();
     }
 }
 
-void BatchDownloadDialog::createUI() {
+void BatchDownloadDialog::setupUi() {
     // Main layout
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     
     // Create tabs
-    QTabWidget* tabWidget = new QTabWidget(this);
+    tabWidget_ = new QTabWidget(this);
     
     // Create tabs
     QWidget* addTab = createAddTab();
@@ -80,41 +81,45 @@ void BatchDownloadDialog::createUI() {
     QWidget* progressTab = createProgressTab();
     
     // Add tabs
-    tabWidget->addTab(addTab, tr("Add URLs"));
-    tabWidget->addTab(listTab, tr("URL List"));
-    tabWidget->addTab(progressTab, tr("Progress"));
+    tabWidget_->addTab(addTab, tr("Add URLs"));
+    tabWidget_->addTab(listTab, tr("URL List"));
+    tabWidget_->addTab(progressTab, tr("Progress"));
     
     // Bottom buttons
     QHBoxLayout* buttonLayout = new QHBoxLayout();
     
-    m_startButton = new QPushButton(tr("Start"), this);
-    m_startButton->setIcon(QIcon(":/resources/icons/batch.png"));
+    startButton_ = new QPushButton(tr("Start"), this);
+    startButton_->setIcon(QIcon(":/icons/batch.png"));
     
-    m_pauseButton = new QPushButton(tr("Pause"), this);
-    m_pauseButton->setIcon(QIcon(":/resources/icons/pause.png"));
+    pauseButton_ = new QPushButton(tr("Pause"), this);
+    pauseButton_->setIcon(QIcon(":/icons/pause.png"));
     
-    m_stopButton = new QPushButton(tr("Stop"), this);
-    m_stopButton->setIcon(QIcon(":/resources/icons/cancel.png"));
+    stopButton_ = new QPushButton(tr("Stop"), this);
+    stopButton_->setIcon(QIcon(":/icons/cancel.png"));
     
-    m_clearButton = new QPushButton(tr("Clear List"), this);
-    m_clearButton->setIcon(QIcon(":/resources/icons/remove.png"));
+    clearButton_ = new QPushButton(tr("Clear List"), this);
+    clearButton_->setIcon(QIcon(":/icons/remove.png"));
     
-    m_closeButton = new QPushButton(tr("Close"), this);
+    QPushButton* closeButton = new QPushButton(tr("Close"), this);
     
-    buttonLayout->addWidget(m_startButton);
-    buttonLayout->addWidget(m_pauseButton);
-    buttonLayout->addWidget(m_stopButton);
-    buttonLayout->addWidget(m_clearButton);
+    buttonLayout->addWidget(startButton_);
+    buttonLayout->addWidget(pauseButton_);
+    buttonLayout->addWidget(stopButton_);
+    buttonLayout->addWidget(clearButton_);
     buttonLayout->addStretch();
-    buttonLayout->addWidget(m_closeButton);
+    buttonLayout->addWidget(closeButton);
     
     // Add to main layout
-    mainLayout->addWidget(tabWidget);
+    mainLayout->addWidget(tabWidget_);
     mainLayout->addLayout(buttonLayout);
     
     // Create timer for updates
-    m_updateTimer = new QTimer(this);
-    m_updateTimer->setInterval(1000); // 1 second
+    updateTimer_ = new QTimer(this);
+    updateTimer_->setInterval(1000); // 1 second
+    
+    // Set initial button states
+    pauseButton_->setEnabled(false);
+    stopButton_->setEnabled(false);
 }
 
 QWidget* BatchDownloadDialog::createAddTab() {
@@ -125,9 +130,9 @@ QWidget* BatchDownloadDialog::createAddTab() {
     QGroupBox* urlInputGroup = new QGroupBox(tr("URL Input"), tab);
     QVBoxLayout* urlInputLayout = new QVBoxLayout(urlInputGroup);
     
-    m_urlEdit = new QTextEdit(urlInputGroup);
-    m_urlEdit->setPlaceholderText(tr("Enter URLs, one per line"));
-    urlInputLayout->addWidget(m_urlEdit);
+    urlListEdit_ = new QTextEdit(urlInputGroup);
+    urlListEdit_->setPlaceholderText(tr("Enter URLs, one per line"));
+    urlInputLayout->addWidget(urlListEdit_);
     
     QHBoxLayout* urlButtonsLayout = new QHBoxLayout();
     
@@ -146,12 +151,12 @@ QWidget* BatchDownloadDialog::createAddTab() {
     
     QHBoxLayout* fileSelectLayout = new QHBoxLayout();
     
-    m_filePathEdit = new QLineEdit(fileInputGroup);
-    m_filePathEdit->setReadOnly(true);
+    filePathEdit_ = new QLineEdit(fileInputGroup);
+    filePathEdit_->setReadOnly(true);
     
     QPushButton* browseButton = new QPushButton(tr("Browse"), fileInputGroup);
     
-    fileSelectLayout->addWidget(m_filePathEdit);
+    fileSelectLayout->addWidget(filePathEdit_);
     fileSelectLayout->addWidget(browseButton);
     
     fileInputLayout->addLayout(fileSelectLayout);
@@ -163,8 +168,8 @@ QWidget* BatchDownloadDialog::createAddTab() {
     QGroupBox* patternGroup = new QGroupBox(tr("URL Pattern Generation"), tab);
     QFormLayout* patternLayout = new QFormLayout(patternGroup);
     
-    m_patternEdit = new QLineEdit(patternGroup);
-    m_patternEdit->setPlaceholderText(tr("URL pattern with {$PATTERN} placeholder, e.g., http://example.com/file{$PATTERN}.zip"));
+    patternEdit_ = new QLineEdit(patternGroup);
+    patternEdit_->setPlaceholderText(tr("URL pattern with {$PATTERN} placeholder, e.g., http://example.com/file{$PATTERN}.zip"));
     
     QHBoxLayout* rangeLayout = new QHBoxLayout();
     QLabel* fromLabel = new QLabel(tr("From:"), patternGroup);
@@ -172,33 +177,33 @@ QWidget* BatchDownloadDialog::createAddTab() {
     QLabel* stepLabel = new QLabel(tr("Step:"), patternGroup);
     QLabel* paddingLabel = new QLabel(tr("Padding:"), patternGroup);
     
-    m_patternFromSpin = new QSpinBox(patternGroup);
-    m_patternFromSpin->setRange(0, 9999);
-    m_patternFromSpin->setValue(1);
+    patternFromSpin_ = new QSpinBox(patternGroup);
+    patternFromSpin_->setRange(0, 9999);
+    patternFromSpin_->setValue(1);
     
-    m_patternToSpin = new QSpinBox(patternGroup);
-    m_patternToSpin->setRange(0, 9999);
-    m_patternToSpin->setValue(10);
+    patternToSpin_ = new QSpinBox(patternGroup);
+    patternToSpin_->setRange(0, 9999);
+    patternToSpin_->setValue(10);
     
-    m_patternStepSpin = new QSpinBox(patternGroup);
-    m_patternStepSpin->setRange(1, 100);
-    m_patternStepSpin->setValue(1);
+    patternStepSpin_ = new QSpinBox(patternGroup);
+    patternStepSpin_->setRange(1, 100);
+    patternStepSpin_->setValue(1);
     
-    m_patternPaddingSpin = new QSpinBox(patternGroup);
-    m_patternPaddingSpin->setRange(0, 10);
-    m_patternPaddingSpin->setValue(0);
-    m_patternPaddingSpin->setSpecialValueText(tr("None"));
+    patternPaddingSpin_ = new QSpinBox(patternGroup);
+    patternPaddingSpin_->setRange(0, 10);
+    patternPaddingSpin_->setValue(0);
+    patternPaddingSpin_->setSpecialValueText(tr("None"));
     
     rangeLayout->addWidget(fromLabel);
-    rangeLayout->addWidget(m_patternFromSpin);
+    rangeLayout->addWidget(patternFromSpin_);
     rangeLayout->addWidget(toLabel);
-    rangeLayout->addWidget(m_patternToSpin);
+    rangeLayout->addWidget(patternToSpin_);
     rangeLayout->addWidget(stepLabel);
-    rangeLayout->addWidget(m_patternStepSpin);
+    rangeLayout->addWidget(patternStepSpin_);
     rangeLayout->addWidget(paddingLabel);
-    rangeLayout->addWidget(m_patternPaddingSpin);
+    rangeLayout->addWidget(patternPaddingSpin_);
     
-    patternLayout->addRow(tr("Pattern:"), m_patternEdit);
+    patternLayout->addRow(tr("Pattern:"), patternEdit_);
     patternLayout->addRow(tr("Range:"), rangeLayout);
     
     QPushButton* generateButton = new QPushButton(tr("Generate URLs"), patternGroup);
@@ -208,25 +213,36 @@ QWidget* BatchDownloadDialog::createAddTab() {
     QGroupBox* optionsGroup = new QGroupBox(tr("Download Options"), tab);
     QFormLayout* optionsLayout = new QFormLayout(optionsGroup);
     
-    m_savePathEdit = new QLineEdit(optionsGroup);
-    m_savePathEdit->setText(getDefaultSavePath());
+    destinationEdit_ = new QLineEdit(optionsGroup);
+    destinationEdit_->setText(QString::fromStdString(downloadManager_.getDefaultDownloadDirectory()));
     
-    QPushButton* browseSavePathButton = new QPushButton(tr("Browse"), optionsGroup);
+    QPushButton* browseDestButton = new QPushButton(tr("Browse"), optionsGroup);
     
-    QHBoxLayout* savePathLayout = new QHBoxLayout();
-    savePathLayout->addWidget(m_savePathEdit);
-    savePathLayout->addWidget(browseSavePathButton);
+    QHBoxLayout* destLayout = new QHBoxLayout();
+    destLayout->addWidget(destinationEdit_);
+    destLayout->addWidget(browseDestButton);
     
-    m_maxSimultaneousSpin = new QSpinBox(optionsGroup);
-    m_maxSimultaneousSpin->setRange(1, 10);
-    m_maxSimultaneousSpin->setValue(3);
+    maxConcurrentSpin_ = new QSpinBox(optionsGroup);
+    maxConcurrentSpin_->setRange(1, 10);
+    maxConcurrentSpin_->setValue(3);
     
-    optionsLayout->addRow(tr("Save To:"), savePathLayout);
-    optionsLayout->addRow(tr("Max Simultaneous Downloads:"), m_maxSimultaneousSpin);
+    createSubdirsCheck_ = new QCheckBox(tr("Create subdirectories based on URL structure"), optionsGroup);
+    startImmediatelyCheck_ = new QCheckBox(tr("Start downloads immediately"), optionsGroup);
+    skipExistingCheck_ = new QCheckBox(tr("Skip existing files"), optionsGroup);
+    
+    createSubdirsCheck_->setChecked(true);
+    startImmediatelyCheck_->setChecked(true);
+    skipExistingCheck_->setChecked(true);
+    
+    optionsLayout->addRow(tr("Save To:"), destLayout);
+    optionsLayout->addRow(tr("Max Concurrent Downloads:"), maxConcurrentSpin_);
+    optionsLayout->addRow("", createSubdirsCheck_);
+    optionsLayout->addRow("", startImmediatelyCheck_);
+    optionsLayout->addRow("", skipExistingCheck_);
     
     // Add URL button
     QPushButton* addUrlsButton = new QPushButton(tr("Add URLs to Queue"), tab);
-    addUrlsButton->setIcon(QIcon(":/resources/icons/add.png"));
+    addUrlsButton->setIcon(QIcon(":/icons/add.png"));
     
     // Add all to layout
     layout->addWidget(urlInputGroup);
@@ -236,13 +252,13 @@ QWidget* BatchDownloadDialog::createAddTab() {
     layout->addWidget(addUrlsButton);
     
     // Store button references
-    m_pasteButton = pasteButton;
-    m_clearUrlsButton = clearButton;
-    m_browseFileButton = browseButton;
-    m_importFileButton = importButton;
-    m_generateButton = generateButton;
-    m_browseSavePathButton = browseSavePathButton;
-    m_addUrlsButton = addUrlsButton;
+    pasteButton_ = pasteButton;
+    clearUrlsButton_ = clearButton;
+    browseFileButton_ = browseButton;
+    importFileButton_ = importButton;
+    generateButton_ = generateButton;
+    browseSavePathButton_ = browseDestButton;
+    addUrlsButton_ = addUrlsButton;
     
     return tab;
 }
@@ -252,31 +268,31 @@ QWidget* BatchDownloadDialog::createListTab() {
     QVBoxLayout* layout = new QVBoxLayout(tab);
     
     // URL list table
-    m_urlTable = new QTableWidget(0, 3, tab);
+    urlTable_ = new QTableWidget(0, 3, tab);
     
     // Set headers
     QStringList headers;
     headers << tr("URL") << tr("Status") << tr("Save Path");
-    m_urlTable->setHorizontalHeaderLabels(headers);
+    urlTable_->setHorizontalHeaderLabels(headers);
     
     // Set header properties
-    m_urlTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    m_urlTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    m_urlTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    urlTable_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    urlTable_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    urlTable_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     
     // Set table properties
-    m_urlTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_urlTable->setAlternatingRowColors(true);
-    m_urlTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    urlTable_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    urlTable_->setAlternatingRowColors(true);
+    urlTable_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     
     // Button panel
     QHBoxLayout* buttonLayout = new QHBoxLayout();
     
     QPushButton* addButton = new QPushButton(tr("Add URL"), tab);
-    addButton->setIcon(QIcon(":/resources/icons/add.png"));
+    addButton->setIcon(QIcon(":/icons/add.png"));
     
     QPushButton* removeButton = new QPushButton(tr("Remove"), tab);
-    removeButton->setIcon(QIcon(":/resources/icons/remove.png"));
+    removeButton->setIcon(QIcon(":/icons/remove.png"));
     
     QPushButton* removeAllButton = new QPushButton(tr("Remove All"), tab);
     
@@ -286,13 +302,13 @@ QWidget* BatchDownloadDialog::createListTab() {
     buttonLayout->addStretch();
     
     // Add to layout
-    layout->addWidget(m_urlTable);
+    layout->addWidget(urlTable_);
     layout->addLayout(buttonLayout);
     
     // Store button references
-    m_addUrlButton = addButton;
-    m_removeUrlButton = removeButton;
-    m_removeAllUrlsButton = removeAllButton;
+    addUrlButton_ = addButton;
+    removeUrlButton_ = removeButton;
+    removeAllUrlsButton_ = removeAllButton;
     
     return tab;
 }
@@ -302,33 +318,33 @@ QWidget* BatchDownloadDialog::createProgressTab() {
     QVBoxLayout* layout = new QVBoxLayout(tab);
     
     // Progress table
-    m_progressTable = new QTableWidget(0, 4, tab);
+    progressTable_ = new QTableWidget(0, 4, tab);
     
     // Set headers
     QStringList headers;
     headers << tr("URL") << tr("Progress") << tr("Status") << tr("Speed");
-    m_progressTable->setHorizontalHeaderLabels(headers);
+    progressTable_->setHorizontalHeaderLabels(headers);
     
     // Set header properties
-    m_progressTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    m_progressTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    m_progressTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-    m_progressTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+    progressTable_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    progressTable_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    progressTable_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    progressTable_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
     
     // Set table properties
-    m_progressTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_progressTable->setAlternatingRowColors(true);
-    m_progressTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    progressTable_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    progressTable_->setAlternatingRowColors(true);
+    progressTable_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     
     // Overall progress
     QGroupBox* overallGroup = new QGroupBox(tr("Overall Progress"), tab);
     QVBoxLayout* overallLayout = new QVBoxLayout(overallGroup);
     
-    m_overallProgress = new QProgressBar(overallGroup);
-    m_overallProgress->setRange(0, 100);
-    m_overallProgress->setValue(0);
-    m_overallProgress->setFormat(tr("%p% (%v/%m)"));
-    m_overallProgress->setAlignment(Qt::AlignCenter);
+    overallProgress_ = new QProgressBar(overallGroup);
+    overallProgress_->setRange(0, 100);
+    overallProgress_->setValue(0);
+    overallProgress_->setFormat(tr("%p% (%v/%m)"));
+    overallProgress_->setAlignment(Qt::AlignCenter);
     
     // Status labels
     QGridLayout* statusLayout = new QGridLayout();
@@ -339,28 +355,28 @@ QWidget* BatchDownloadDialog::createProgressTab() {
     QLabel* completedLabel = new QLabel(tr("Completed:"), overallGroup);
     QLabel* failedLabel = new QLabel(tr("Failed:"), overallGroup);
     
-    m_totalCountLabel = new QLabel("0", overallGroup);
-    m_pendingCountLabel = new QLabel("0", overallGroup);
-    m_activeCountLabel = new QLabel("0", overallGroup);
-    m_completedCountLabel = new QLabel("0", overallGroup);
-    m_failedCountLabel = new QLabel("0", overallGroup);
+    totalCountLabel_ = new QLabel("0", overallGroup);
+    pendingCountLabel_ = new QLabel("0", overallGroup);
+    activeCountLabel_ = new QLabel("0", overallGroup);
+    completedCountLabel_ = new QLabel("0", overallGroup);
+    failedCountLabel_ = new QLabel("0", overallGroup);
     
     statusLayout->addWidget(totalLabel, 0, 0);
-    statusLayout->addWidget(m_totalCountLabel, 0, 1);
+    statusLayout->addWidget(totalCountLabel_, 0, 1);
     statusLayout->addWidget(pendingLabel, 0, 2);
-    statusLayout->addWidget(m_pendingCountLabel, 0, 3);
+    statusLayout->addWidget(pendingCountLabel_, 0, 3);
     statusLayout->addWidget(activeLabel, 1, 0);
-    statusLayout->addWidget(m_activeCountLabel, 1, 1);
+    statusLayout->addWidget(activeCountLabel_, 1, 1);
     statusLayout->addWidget(completedLabel, 1, 2);
-    statusLayout->addWidget(m_completedCountLabel, 1, 3);
+    statusLayout->addWidget(completedCountLabel_, 1, 3);
     statusLayout->addWidget(failedLabel, 2, 0);
-    statusLayout->addWidget(m_failedCountLabel, 2, 1);
+    statusLayout->addWidget(failedCountLabel_, 2, 1);
     
-    overallLayout->addWidget(m_overallProgress);
+    overallLayout->addWidget(overallProgress_);
     overallLayout->addLayout(statusLayout);
     
     // Add to layout
-    layout->addWidget(m_progressTable);
+    layout->addWidget(progressTable_);
     layout->addWidget(overallGroup);
     
     return tab;
@@ -368,70 +384,59 @@ QWidget* BatchDownloadDialog::createProgressTab() {
 
 void BatchDownloadDialog::connectSignals() {
     // Add tab buttons
-    connect(m_pasteButton, &QPushButton::clicked, this, &BatchDownloadDialog::onPasteClicked);
-    connect(m_clearUrlsButton, &QPushButton::clicked, this, &BatchDownloadDialog::onClearUrlsClicked);
-    connect(m_browseFileButton, &QPushButton::clicked, this, &BatchDownloadDialog::onBrowseFileClicked);
-    connect(m_importFileButton, &QPushButton::clicked, this, &BatchDownloadDialog::onImportFileClicked);
-    connect(m_generateButton, &QPushButton::clicked, this, &BatchDownloadDialog::onGenerateUrlsClicked);
-    connect(m_browseSavePathButton, &QPushButton::clicked, this, &BatchDownloadDialog::onBrowseSavePathClicked);
-    connect(m_addUrlsButton, &QPushButton::clicked, this, &BatchDownloadDialog::onAddUrlsClicked);
+    connect(pasteButton_, &QPushButton::clicked, this, &BatchDownloadDialog::onPasteClicked);
+    connect(clearUrlsButton_, &QPushButton::clicked, this, &BatchDownloadDialog::onClearUrlsClicked);
+    connect(browseFileButton_, &QPushButton::clicked, this, &BatchDownloadDialog::onBrowseFileClicked);
+    connect(importFileButton_, &QPushButton::clicked, this, &BatchDownloadDialog::onImportFileClicked);
+    connect(generateButton_, &QPushButton::clicked, this, &BatchDownloadDialog::onGenerateUrlsClicked);
+    connect(browseSavePathButton_, &QPushButton::clicked, this, &BatchDownloadDialog::onBrowseSavePathClicked);
+    connect(addUrlsButton_, &QPushButton::clicked, this, &BatchDownloadDialog::onAddUrlsClicked);
     
     // List tab buttons
-    connect(m_addUrlButton, &QPushButton::clicked, this, &BatchDownloadDialog::onAddSingleUrlClicked);
-    connect(m_removeUrlButton, &QPushButton::clicked, this, &BatchDownloadDialog::onRemoveUrlClicked);
-    connect(m_removeAllUrlsButton, &QPushButton::clicked, this, &BatchDownloadDialog::onRemoveAllUrlsClicked);
+    connect(addUrlButton_, &QPushButton::clicked, this, &BatchDownloadDialog::onAddSingleUrlClicked);
+    connect(removeUrlButton_, &QPushButton::clicked, this, &BatchDownloadDialog::onRemoveUrlClicked);
+    connect(removeAllUrlsButton_, &QPushButton::clicked, this, &BatchDownloadDialog::onRemoveAllUrlsClicked);
     
     // Bottom buttons
-    connect(m_startButton, &QPushButton::clicked, this, &BatchDownloadDialog::onStartClicked);
-    connect(m_pauseButton, &QPushButton::clicked, this, &BatchDownloadDialog::onPauseClicked);
-    connect(m_stopButton, &QPushButton::clicked, this, &BatchDownloadDialog::onStopClicked);
-    connect(m_clearButton, &QPushButton::clicked, this, &BatchDownloadDialog::onClearListClicked);
-    connect(m_closeButton, &QPushButton::clicked, this, &BatchDownloadDialog::close);
+    connect(startButton_, &QPushButton::clicked, this, &BatchDownloadDialog::onStartClicked);
+    connect(pauseButton_, &QPushButton::clicked, this, &BatchDownloadDialog::onPauseClicked);
+    connect(stopButton_, &QPushButton::clicked, this, &BatchDownloadDialog::onStopClicked);
+    connect(clearButton_, &QPushButton::clicked, this, &BatchDownloadDialog::onClearListClicked);
     
     // Timer
-    connect(m_updateTimer, &QTimer::timeout, this, &BatchDownloadDialog::updateProgress);
+    connect(updateTimer_, &QTimer::timeout, this, &BatchDownloadDialog::updateProgress);
     
     // Shortcut for pasting URLs
-    QShortcut* pasteShortcut = new QShortcut(QKeySequence::Paste, m_urlEdit);
+    QShortcut* pasteShortcut = new QShortcut(QKeySequence::Paste, urlListEdit_);
     connect(pasteShortcut, &QShortcut::activated, this, &BatchDownloadDialog::onPasteClicked);
 }
 
 void BatchDownloadDialog::initialize() {
-    // Get batch downloader instance
-    auto& batchDownloader = Core::BatchDownloader::instance();
+    // Initialize batch downloader
+    batchDownloader_ = std::make_shared<dm::core::BatchDownloader>(downloadManager_);
     
     // Register progress callback
-    batchDownloader.addBatchProgressCallback(
-        [this](int total, int completed, int failed, int active, int pending) {
+    batchDownloader_->setProgressCallback(
+        [this](int processedCount, int totalCount, double overallProgress, int successCount, int failureCount) {
+            // Use QMetaObject to ensure thread safety
             QMetaObject::invokeMethod(this, "updateBatchProgress", 
                                Qt::QueuedConnection,
-                               Q_ARG(int, total),
-                               Q_ARG(int, completed),
-                               Q_ARG(int, failed),
-                               Q_ARG(int, active),
-                               Q_ARG(int, pending));
+                               Q_ARG(int, processedCount),
+                               Q_ARG(int, totalCount),
+                               Q_ARG(int, successCount),
+                               Q_ARG(int, failureCount));
         }
     );
     
-    // Register item callback
-    batchDownloader.addBatchItemCallback(
-        [this](int index, Core::BatchItemStatus status) {
-            QMetaObject::invokeMethod(this, "updateBatchItem", 
-                               Qt::QueuedConnection,
-                               Q_ARG(int, index),
-                               Q_ARG(int, static_cast<int>(status)));
-        }
-    );
-    
-    // Initialize state
+    // Update UI state
     updateButtons();
     
     // Start timer
-    m_updateTimer->start();
+    updateTimer_->start();
 }
 
 void BatchDownloadDialog::dragEnterEvent(QDragEnterEvent* event) {
-    // Accept drag & drop of text/uri-list (URLs or files)
+    // Accept drag & drop of URLs or files
     if (event->mimeData()->hasUrls() || event->mimeData()->hasText()) {
         event->acceptProposedAction();
     }
@@ -464,7 +469,7 @@ void BatchDownloadDialog::dropEvent(QDropEvent* event) {
         // Add to text edit if we have URLs
         if (!text.isEmpty()) {
             // Add to current text
-            m_urlEdit->append(text);
+            urlListEdit_->append(text);
         }
         
         event->acceptProposedAction();
@@ -472,7 +477,7 @@ void BatchDownloadDialog::dropEvent(QDropEvent* event) {
     else if (event->mimeData()->hasText()) {
         // Text drop - add to URL edit
         QString text = event->mimeData()->text();
-        m_urlEdit->append(text);
+        urlListEdit_->append(text);
         event->acceptProposedAction();
     }
 }
@@ -499,14 +504,8 @@ void BatchDownloadDialog::importUrlsFromFile(const QString& filePath) {
     
     // Add to URL edit
     if (!text.isEmpty()) {
-        m_urlEdit->append(text);
+        urlListEdit_->append(text);
     }
-}
-
-QString BatchDownloadDialog::getDefaultSavePath() {
-    // Get default download directory from download manager
-    auto& downloadManager = Core::DownloadManager::instance();
-    return QString::fromStdString(downloadManager.getDefaultDownloadDirectory());
 }
 
 void BatchDownloadDialog::onPasteClicked() {
@@ -514,33 +513,33 @@ void BatchDownloadDialog::onPasteClicked() {
     QString text = clipboard->text();
     
     if (!text.isEmpty()) {
-        m_urlEdit->append(text);
+        urlListEdit_->append(text);
     }
 }
 
 void BatchDownloadDialog::onClearUrlsClicked() {
-    m_urlEdit->clear();
+    urlListEdit_->clear();
 }
 
 void BatchDownloadDialog::onBrowseFileClicked() {
     QString filePath = QFileDialog::getOpenFileName(
         this, tr("Select File with URLs"), 
         QDir::homePath(), 
-        tr("Text Files (*.txt);;All Files (*)")
+        tr("Text Files (*.txt);;CSV Files (*.csv);;All Files (*)")
     );
     
     if (!filePath.isEmpty()) {
-        m_filePathEdit->setText(filePath);
+        filePathEdit_->setText(filePath);
     }
 }
 
 void BatchDownloadDialog::onImportFileClicked() {
-    QString filePath = m_filePathEdit->text();
+    QString filePath = filePathEdit_->text();
     
     if (filePath.isEmpty()) {
         // No file selected, show browse dialog
         onBrowseFileClicked();
-        filePath = m_filePathEdit->text();
+        filePath = filePathEdit_->text();
         
         if (filePath.isEmpty()) {
             return;
@@ -552,7 +551,7 @@ void BatchDownloadDialog::onImportFileClicked() {
 }
 
 void BatchDownloadDialog::onGenerateUrlsClicked() {
-    QString pattern = m_patternEdit->text();
+    QString pattern = patternEdit_->text();
     
     if (pattern.isEmpty() || !pattern.contains("{$PATTERN}")) {
         QMessageBox::warning(this, tr("Error"), 
@@ -560,10 +559,10 @@ void BatchDownloadDialog::onGenerateUrlsClicked() {
         return;
     }
     
-    int from = m_patternFromSpin->value();
-    int to = m_patternToSpin->value();
-    int step = m_patternStepSpin->value();
-    int padding = m_patternPaddingSpin->value();
+    int from = patternFromSpin_->value();
+    int to = patternToSpin_->value();
+    int step = patternStepSpin_->value();
+    int padding = patternPaddingSpin_->value();
     
     if (from > to) {
         QMessageBox::warning(this, tr("Error"), 
@@ -592,24 +591,24 @@ void BatchDownloadDialog::onGenerateUrlsClicked() {
     }
     
     // Add to URL edit
-    m_urlEdit->append(urls.join("\n"));
+    urlListEdit_->append(urls.join("\n"));
 }
 
 void BatchDownloadDialog::onBrowseSavePathClicked() {
     QString dir = QFileDialog::getExistingDirectory(
         this, tr("Select Save Location"),
-        m_savePathEdit->text(),
+        destinationEdit_->text(),
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
     );
     
     if (!dir.isEmpty()) {
-        m_savePathEdit->setText(dir);
+        destinationEdit_->setText(dir);
     }
 }
 
 void BatchDownloadDialog::onAddUrlsClicked() {
     // Get URLs from text edit
-    QString text = m_urlEdit->toPlainText();
+    QString text = urlListEdit_->toPlainText();
     
     if (text.isEmpty()) {
         QMessageBox::warning(this, tr("Error"), tr("Please enter at least one URL."));
@@ -623,7 +622,7 @@ void BatchDownloadDialog::onAddUrlsClicked() {
     }
     
     // Get save path
-    QString savePath = m_savePathEdit->text();
+    QString savePath = destinationEdit_->text();
     if (savePath.isEmpty()) {
         QMessageBox::warning(this, tr("Error"), tr("Please select a save location."));
         return;
@@ -633,7 +632,7 @@ void BatchDownloadDialog::onAddUrlsClicked() {
     addUrlsToTable(lines, savePath);
     
     // Clear URL edit
-    m_urlEdit->clear();
+    urlListEdit_->clear();
 }
 
 void BatchDownloadDialog::onAddSingleUrlClicked() {
@@ -649,9 +648,9 @@ void BatchDownloadDialog::onAddSingleUrlClicked() {
     }
     
     // Get save path
-    QString savePath = m_savePathEdit->text();
+    QString savePath = destinationEdit_->text();
     if (savePath.isEmpty()) {
-        savePath = getDefaultSavePath();
+        savePath = QString::fromStdString(downloadManager_.getDefaultDownloadDirectory());
     }
     
     // Add to table
@@ -662,7 +661,7 @@ void BatchDownloadDialog::onAddSingleUrlClicked() {
 
 void BatchDownloadDialog::onRemoveUrlClicked() {
     // Get selected rows
-    QList<QTableWidgetItem*> selectedItems = m_urlTable->selectedItems();
+    QList<QTableWidgetItem*> selectedItems = urlTable_->selectedItems();
     
     if (selectedItems.isEmpty()) {
         return;
@@ -678,7 +677,7 @@ void BatchDownloadDialog::onRemoveUrlClicked() {
     std::sort(rowList.begin(), rowList.end(), std::greater<int>());
     
     for (int row : rowList) {
-        m_urlTable->removeRow(row);
+        urlTable_->removeRow(row);
     }
     
     // Update batch info
@@ -694,7 +693,7 @@ void BatchDownloadDialog::onRemoveAllUrlsClicked() {
     );
     
     if (reply == QMessageBox::Yes) {
-        m_urlTable->setRowCount(0);
+        urlTable_->setRowCount(0);
         
         // Update batch info
         updateBatchInfo();
@@ -702,39 +701,53 @@ void BatchDownloadDialog::onRemoveAllUrlsClicked() {
 }
 
 void BatchDownloadDialog::onStartClicked() {
-    if (m_urlTable->rowCount() == 0) {
+    if (urlTable_->rowCount() == 0) {
         QMessageBox::warning(this, tr("Error"), tr("No URLs in the batch list."));
         return;
     }
-    
-    // Get batch downloader
-    auto& batchDownloader = Core::BatchDownloader::instance();
-    
-    // Set options
-    batchDownloader.setMaxConcurrentDownloads(m_maxSimultaneousSpin->value());
     
     // Collect URLs and destination directories
     std::vector<std::string> urls;
     std::map<std::string, std::string> urlDirs;
     
-    for (int i = 0; i < m_urlTable->rowCount(); i++) {
-        QString url = m_urlTable->item(i, 0)->text();
-        QString savePath = m_urlTable->item(i, 2)->text();
+    for (int i = 0; i < urlTable_->rowCount(); i++) {
+        QString url = urlTable_->item(i, 0)->text();
+        QString savePath = urlTable_->item(i, 2)->text();
         
         urls.push_back(url.toStdString());
         urlDirs[url.toStdString()] = savePath.toStdString();
     }
     
     // Clear progress table
-    m_progressTable->setRowCount(0);
+    progressTable_->setRowCount(0);
     
-    // Add batch URLs
-    for (const auto& url : urls) {
-        batchDownloader.addBatchUrls({url}, urlDirs[url]);
-    }
+    // Create batch download configuration
+    dm::core::BatchDownloadConfig config;
+    config.destinationDirectory = destinationEdit_->text().toStdString();
+    config.createSubdirectories = createSubdirsCheck_->isChecked();
+    config.skipExistingFiles = skipExistingCheck_->isChecked();
+    config.startImmediately = startImmediatelyCheck_->isChecked();
+    config.maxConcurrentFiles = maxConcurrentSpin_->value();
+    config.sourceType = dm::core::BatchUrlSourceType::URL_LIST;
     
     // Start batch download
-    batchDownloader.start();
+    bool success = batchDownloader_->startBatchJob(
+        config,
+        // Progress callback is already set in initialize()
+        nullptr,
+        // Completion callback
+        [this](int successCount, int failureCount, const std::vector<std::string>& failedUrls) {
+            QMetaObject::invokeMethod(this, "onBatchCompleted", 
+                                   Qt::QueuedConnection,
+                                   Q_ARG(int, successCount),
+                                   Q_ARG(int, failureCount));
+        }
+    );
+    
+    if (!success) {
+        QMessageBox::warning(this, tr("Error"), tr("Failed to start batch download."));
+        return;
+    }
     
     // Update UI
     updateButtons();
@@ -742,18 +755,20 @@ void BatchDownloadDialog::onStartClicked() {
 }
 
 void BatchDownloadDialog::onPauseClicked() {
-    auto& batchDownloader = Core::BatchDownloader::instance();
+    if (!batchDownloader_) return;
     
-    if (batchDownloader.isPaused()) {
+    if (isPaused_) {
         // Resume
-        batchDownloader.resume();
-        m_pauseButton->setText(tr("Pause"));
-        m_pauseButton->setIcon(QIcon(":/resources/icons/pause.png"));
+        batchDownloader_->resumeBatchJob();
+        pauseButton_->setText(tr("Pause"));
+        pauseButton_->setIcon(QIcon(":/icons/pause.png"));
+        isPaused_ = false;
     } else {
         // Pause
-        batchDownloader.pause();
-        m_pauseButton->setText(tr("Resume"));
-        m_pauseButton->setIcon(QIcon(":/resources/icons/resume.png"));
+        batchDownloader_->cancelBatchJob();
+        pauseButton_->setText(tr("Resume"));
+        pauseButton_->setIcon(QIcon(":/icons/resume.png"));
+        isPaused_ = true;
     }
     
     // Update UI
@@ -768,10 +783,10 @@ void BatchDownloadDialog::onStopClicked() {
         QMessageBox::Yes | QMessageBox::No
     );
     
-    if (reply == QMessageBox::Yes) {
+    if (reply == QMessageBox::Yes && batchDownloader_) {
         // Stop batch download
-        auto& batchDownloader = Core::BatchDownloader::instance();
-        batchDownloader.stop();
+        batchDownloader_->cancelBatchJob();
+        isPaused_ = false;
         
         // Update UI
         updateButtons();
@@ -788,17 +803,13 @@ void BatchDownloadDialog::onClearListClicked() {
     
     if (reply == QMessageBox::Yes) {
         // Stop if running
-        auto& batchDownloader = Core::BatchDownloader::instance();
-        if (batchDownloader.isRunning()) {
-            batchDownloader.stop();
+        if (batchDownloader_ && batchDownloader_->isJobRunning()) {
+            batchDownloader_->cancelBatchJob();
         }
         
-        // Clear queue
-        batchDownloader.clearQueue();
-        
         // Clear tables
-        m_urlTable->setRowCount(0);
-        m_progressTable->setRowCount(0);
+        urlTable_->setRowCount(0);
+        progressTable_->setRowCount(0);
         
         // Update UI
         updateButtons();
@@ -819,8 +830,8 @@ void BatchDownloadDialog::addUrlsToTable(const QStringList& urls, const QString&
         
         // Check if URL is already in the list
         bool exists = false;
-        for (int i = 0; i < m_urlTable->rowCount(); i++) {
-            if (m_urlTable->item(i, 0)->text() == url) {
+        for (int i = 0; i < urlTable_->rowCount(); i++) {
+            if (urlTable_->item(i, 0)->text() == url) {
                 exists = true;
                 break;
             }
@@ -831,17 +842,17 @@ void BatchDownloadDialog::addUrlsToTable(const QStringList& urls, const QString&
         }
         
         // Add new row
-        int row = m_urlTable->rowCount();
-        m_urlTable->insertRow(row);
+        int row = urlTable_->rowCount();
+        urlTable_->insertRow(row);
         
         // Set items
         QTableWidgetItem* urlItem = new QTableWidgetItem(url);
         QTableWidgetItem* statusItem = new QTableWidgetItem(tr("Pending"));
         QTableWidgetItem* savePathItem = new QTableWidgetItem(savePath);
         
-        m_urlTable->setItem(row, 0, urlItem);
-        m_urlTable->setItem(row, 1, statusItem);
-        m_urlTable->setItem(row, 2, savePathItem);
+        urlTable_->setItem(row, 0, urlItem);
+        urlTable_->setItem(row, 1, statusItem);
+        urlTable_->setItem(row, 2, savePathItem);
     }
     
     // Update batch info
@@ -850,169 +861,221 @@ void BatchDownloadDialog::addUrlsToTable(const QStringList& urls, const QString&
 
 void BatchDownloadDialog::updateBatchInfo() {
     // Update counts
-    m_totalCountLabel->setText(QString::number(m_urlTable->rowCount()));
-    m_pendingCountLabel->setText(QString::number(m_urlTable->rowCount()));
-    m_activeCountLabel->setText("0");
-    m_completedCountLabel->setText("0");
-    m_failedCountLabel->setText("0");
+    totalCountLabel_->setText(QString::number(urlTable_->rowCount()));
+    pendingCountLabel_->setText(QString::number(urlTable_->rowCount()));
+    activeCountLabel_->setText("0");
+    completedCountLabel_->setText("0");
+    failedCountLabel_->setText("0");
     
     // Update progress
-    m_overallProgress->setValue(0);
-    m_overallProgress->setMaximum(m_urlTable->rowCount());
-    m_overallProgress->setFormat(tr("%p% (%v/%m)"));
+    overallProgress_->setValue(0);
+    overallProgress_->setMaximum(std::max(1, urlTable_->rowCount()));
+    overallProgress_->setFormat(tr("%p% (%v/%m)"));
 }
 
 void BatchDownloadDialog::updateButtons() {
-    auto& batchDownloader = Core::BatchDownloader::instance();
+    bool isRunning = false;
     
-    bool isRunning = batchDownloader.isRunning();
-    bool isPaused = batchDownloader.isPaused();
+    if (batchDownloader_) {
+        isRunning = batchDownloader_->isJobRunning();
+    }
     
-    m_startButton->setEnabled(!isRunning);
-    m_pauseButton->setEnabled(isRunning);
-    m_stopButton->setEnabled(isRunning);
+    startButton_->setEnabled(!isRunning);
+    pauseButton_->setEnabled(isRunning);
+    stopButton_->setEnabled(isRunning);
     
-    if (isRunning && isPaused) {
-        m_pauseButton->setText(tr("Resume"));
-        m_pauseButton->setIcon(QIcon(":/resources/icons/resume.png"));
+    // Update pause button text based on state
+    if (isRunning && isPaused_) {
+        pauseButton_->setText(tr("Resume"));
+        pauseButton_->setIcon(QIcon(":/icons/resume.png"));
     } else {
-        m_pauseButton->setText(tr("Pause"));
-        m_pauseButton->setIcon(QIcon(":/resources/icons/pause.png"));
+        pauseButton_->setText(tr("Pause"));
+        pauseButton_->setIcon(QIcon(":/icons/pause.png"));
     }
 }
 
 void BatchDownloadDialog::updateProgress() {
-    auto& batchDownloader = Core::BatchDownloader::instance();
+    if (!batchDownloader_) return;
     
     // Update buttons
     updateButtons();
     
-    // Get batch items
-    auto batchItems = batchDownloader.getBatchItems();
+    // Get job progress info
+    int processedCount = 0;
+    int totalCount = 0;
+    double overallProgress = 0.0;
+    int successCount = 0;
+    int failureCount = 0;
+    
+    batchDownloader_->getJobProgress(processedCount, totalCount, overallProgress, successCount, failureCount);
+    
+    // Update progress table and info based on these values
+    updateBatchProgress(processedCount, totalCount, successCount, failureCount);
     
     // Update progress table
-    updateProgressTable(batchItems);
+    updateProgressTable();
 }
 
-void BatchDownloadDialog::updateProgressTable(const std::vector<Core::BatchItem>& items) {
-    // Ensure table has the right number of rows
-    while (m_progressTable->rowCount() < static_cast<int>(items.size())) {
-        m_progressTable->insertRow(m_progressTable->rowCount());
-    }
-    while (m_progressTable->rowCount() > static_cast<int>(items.size())) {
-        m_progressTable->removeRow(m_progressTable->rowCount() - 1);
-    }
+void BatchDownloadDialog::updateProgressTable() {
+    if (!batchDownloader_) return;
     
-    // Update each row
-    for (size_t i = 0; i < items.size(); i++) {
-        const Core::BatchItem& item = items[i];
-        
-        // URL
-        QTableWidgetItem* urlItem = m_progressTable->item(i, 0);
-        if (!urlItem) {
-            urlItem = new QTableWidgetItem(QString::fromStdString(item.url));
-            m_progressTable->setItem(i, 0, urlItem);
-        } else {
-            urlItem->setText(QString::fromStdString(item.url));
+    // Get active download tasks
+    auto tasks = downloadManager_.getAllDownloadTasks();
+    
+    // We need to track which tasks are part of our batch job
+    // In a real implementation, this would require proper tracking of batch items
+    
+    // For now, let's update the UI with what we have
+    int row = 0;
+    for (const auto& task : tasks) {
+        if (progressTable_->rowCount() <= row) {
+            progressTable_->insertRow(row);
         }
         
-        // Progress
-        QProgressBar* progressBar = qobject_cast<QProgressBar*>(m_progressTable->cellWidget(i, 1));
+        // URL
+        QTableWidgetItem* urlItem = progressTable_->item(row, 0);
+        if (!urlItem) {
+            urlItem = new QTableWidgetItem(QString::fromStdString(task->getUrl()));
+            progressTable_->setItem(row, 0, urlItem);
+        }
+        
+        // Progress bar
+        QProgressBar* progressBar = qobject_cast<QProgressBar*>(progressTable_->cellWidget(row, 1));
         if (!progressBar) {
-            progressBar = new QProgressBar(m_progressTable);
+            progressBar = new QProgressBar(progressTable_);
             progressBar->setRange(0, 100);
             progressBar->setValue(0);
             progressBar->setTextVisible(true);
-            m_progressTable->setCellWidget(i, 1, progressBar);
-        }
-        
-        // Update progress if task exists
-        if (item.taskId > 0 && item.task) {
-            int64_t fileSize = item.task->getFileSize();
-            int64_t downloaded = item.task->getDownloadedBytes();
-            
-            if (fileSize > 0) {
-                int percent = static_cast<int>((downloaded * 100) / fileSize);
-                progressBar->setValue(percent);
-            }
+            progressTable_->setCellWidget(row, 1, progressBar);
         }
         
         // Status
-        QTableWidgetItem* statusItem = m_progressTable->item(i, 2);
+        QTableWidgetItem* statusItem = progressTable_->item(row, 2);
         if (!statusItem) {
             statusItem = new QTableWidgetItem();
-            m_progressTable->setItem(i, 2, statusItem);
+            progressTable_->setItem(row, 2, statusItem);
         }
         
         // Speed
-        QTableWidgetItem* speedItem = m_progressTable->item(i, 3);
+        QTableWidgetItem* speedItem = progressTable_->item(row, 3);
         if (!speedItem) {
             speedItem = new QTableWidgetItem();
-            m_progressTable->setItem(i, 3, speedItem);
+            progressTable_->setItem(row, 3, speedItem);
         }
         
-        // Update status and speed based on batch item status
-        switch (item.status) {
-            case Core::BatchItemStatus::PENDING:
-                statusItem->setText(tr("Pending"));
-                speedItem->setText("");
+        // Update progress bar
+        auto progressInfo = task->getProgressInfo();
+        int progressPercent = static_cast<int>(progressInfo.progressPercent);
+        progressBar->setValue(progressPercent);
+        
+        // Update status
+        QString statusText;
+        switch (task->getStatus()) {
+            case dm::core::DownloadStatus::QUEUED:
+                statusText = tr("Queued");
                 break;
-            case Core::BatchItemStatus::ACTIVE:
-                statusItem->setText(tr("Downloading"));
-                if (item.task) {
-                    int speed = item.task->getCurrentSpeed();
-                    speedItem->setText(QString::fromStdString(Utils::StringUtils::formatBitrate(speed)));
-                } else {
-                    speedItem->setText("");
-                }
+            case dm::core::DownloadStatus::CONNECTING:
+                statusText = tr("Connecting");
                 break;
-            case Core::BatchItemStatus::COMPLETED:
-                statusItem->setText(tr("Completed"));
-                speedItem->setText("");
+            case dm::core::DownloadStatus::DOWNLOADING:
+                statusText = tr("Downloading");
                 break;
-            case Core::BatchItemStatus::FAILED:
-                statusItem->setText(tr("Failed"));
-                speedItem->setText("");
+            case dm::core::DownloadStatus::PAUSED:
+                statusText = tr("Paused");
                 break;
+            case dm::core::DownloadStatus::COMPLETED:
+                statusText = tr("Completed");
+                break;
+            case dm::core::DownloadStatus::ERROR:
+                statusText = tr("Error");
+                break;
+            case dm::core::DownloadStatus::CANCELED:
+                statusText = tr("Canceled");
+                break;
+            default:
+                statusText = tr("Unknown");
         }
+        statusItem->setText(statusText);
+        
+        // Update speed
+        speedItem->setText(formatSpeed(progressInfo.downloadSpeed));
+        
+        row++;
+    }
+    
+    // Remove extra rows if needed
+    while (progressTable_->rowCount() > row) {
+        progressTable_->removeRow(progressTable_->rowCount() - 1);
     }
 }
 
-void BatchDownloadDialog::updateBatchProgress(int total, int completed, int failed, int active, int pending) {
+void BatchDownloadDialog::updateBatchProgress(int processedCount, int totalCount, int successCount, int failureCount) {
     // Update status labels
-    m_totalCountLabel->setText(QString::number(total));
-    m_pendingCountLabel->setText(QString::number(pending));
-    m_activeCountLabel->setText(QString::number(active));
-    m_completedCountLabel->setText(QString::number(completed));
-    m_failedCountLabel->setText(QString::number(failed));
+    totalCountLabel_->setText(QString::number(totalCount));
+    pendingCountLabel_->setText(QString::number(totalCount - processedCount));
+    activeCountLabel_->setText(QString::number(processedCount - successCount - failureCount));
+    completedCountLabel_->setText(QString::number(successCount));
+    failedCountLabel_->setText(QString::number(failureCount));
     
     // Update progress bar
-    m_overallProgress->setMaximum(total);
-    m_overallProgress->setValue(completed);
+    overallProgress_->setMaximum(std::max(1, totalCount));
+    overallProgress_->setValue(successCount);
 }
 
 void BatchDownloadDialog::updateBatchItem(int index, int status) {
     // Update URL list table if the item is there
-    if (index < m_urlTable->rowCount()) {
-        QTableWidgetItem* statusItem = m_urlTable->item(index, 1);
+    if (index < urlTable_->rowCount()) {
+        QTableWidgetItem* statusItem = urlTable_->item(index, 1);
         if (statusItem) {
-            switch (static_cast<Core::BatchItemStatus>(status)) {
-                case Core::BatchItemStatus::PENDING:
-                    statusItem->setText(tr("Pending"));
+            switch (static_cast<dm::core::DownloadStatus>(status)) {
+                case dm::core::DownloadStatus::QUEUED:
+                    statusItem->setText(tr("Queued"));
                     break;
-                case Core::BatchItemStatus::ACTIVE:
+                case dm::core::DownloadStatus::CONNECTING:
+                    statusItem->setText(tr("Connecting"));
+                    break;
+                case dm::core::DownloadStatus::DOWNLOADING:
                     statusItem->setText(tr("Downloading"));
                     break;
-                case Core::BatchItemStatus::COMPLETED:
+                case dm::core::DownloadStatus::PAUSED:
+                    statusItem->setText(tr("Paused"));
+                    break;
+                case dm::core::DownloadStatus::COMPLETED:
                     statusItem->setText(tr("Completed"));
                     break;
-                case Core::BatchItemStatus::FAILED:
-                    statusItem->setText(tr("Failed"));
+                case dm::core::DownloadStatus::ERROR:
+                    statusItem->setText(tr("Error"));
                     break;
+                case dm::core::DownloadStatus::CANCELED:
+                    statusItem->setText(tr("Canceled"));
+                    break;
+                default:
+                    statusItem->setText(tr("Unknown"));
             }
         }
     }
 }
 
-} // namespace UI
-} // namespace DownloadManager
+QString BatchDownloadDialog::formatSpeed(double bytesPerSecond) {
+    if (bytesPerSecond < 1024) {
+        return QString("%1 B/s").arg(bytesPerSecond, 0, 'f', 0);
+    } else if (bytesPerSecond < 1024 * 1024) {
+        return QString("%1 KB/s").arg(bytesPerSecond / 1024, 0, 'f', 1);
+    } else if (bytesPerSecond < 1024 * 1024 * 1024) {
+        return QString("%1 MB/s").arg(bytesPerSecond / (1024 * 1024), 0, 'f', 2);
+    } else {
+        return QString("%1 GB/s").arg(bytesPerSecond / (1024 * 1024 * 1024), 0, 'f', 2);
+    }
+}
+
+void BatchDownloadDialog::onBatchCompleted(int successCount, int failureCount) {
+    QMessageBox::information(this, tr("Batch Download Complete"),
+                           tr("Batch download completed with %1 successful and %2 failed downloads.")
+                           .arg(successCount).arg(failureCount));
+    
+    // Update UI
+    updateButtons();
+}
+
+} // namespace ui
+} // namespace dm

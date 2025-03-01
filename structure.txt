@@ -225,5 +225,3 @@ DownloadManager/
     ├── jsoncpp/                             # JSON parsing
     ├── libtorrent/                          # BitTorrent support
     └── qt/                                  # Qt library for UI
-
-Now update the C++ Download Manager - Project Structure, and forecast the complete development, and generate accordingly, and continue building further, for example, this is the sample structure:

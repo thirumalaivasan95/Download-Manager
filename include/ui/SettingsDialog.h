@@ -11,7 +11,7 @@
 #include <QGroupBox>
 #include <QLabel>
 
-#include "include/core/Settings.h"
+#include "core/Settings.h"
 
 namespace dm {
 namespace ui {

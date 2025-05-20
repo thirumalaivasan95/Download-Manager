@@ -1,6 +1,6 @@
 #include "include/ui/BatchDownloadDialog.h"
 #include "include/core/BatchDownloader.h"
-#include "include/core/DownloadManager.h"
+#include "core/DownloadManager.h"
 #include "include/utils/Logger.h"
 #include "include/utils/FileUtils.h"
 #include "include/utils/UrlParser.h"

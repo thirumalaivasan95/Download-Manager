@@ -8,14 +8,11 @@
 #include <mutex>
 #include <functional>
 #include <chrono>
-#include "include/core/SegmentDownloader.h"
+#include "core/SegmentDownloader.h"
 
 namespace dm {
 namespace core {
 
-/**
- * @brief Download status enumeration
- */
 enum class DownloadStatus {
     NONE,           // Not started
     QUEUED,         // In queue, waiting to start
@@ -27,15 +24,15 @@ enum class DownloadStatus {
     CANCELED        // Canceled by user
 };
 
-/**
- * @brief Download type enumeration
- */
 enum class DownloadType {
     REGULAR,        // Regular file download
     STREAMING,      // Streaming content
     BATCH,          // Part of a batch download
     SCHEDULED       // Scheduled for later
 };
+
+class DownloadTask;
+using StatusChangeCallback = std::function<void(std::shared_ptr<DownloadTask>, DownloadStatus, DownloadStatus)>;
 
 /**
  * @brief Download priority enumeration
@@ -63,11 +60,6 @@ struct ProgressInfo {
  * @brief Progress callback function type
  */
 using TaskProgressCallback = std::function<void(const ProgressInfo&)>;
-
-/**
- * @brief Status change callback function type
- */
-using StatusChangeCallback = std::function<void(DownloadStatus)>;
 
 /**
  * @brief Download task class
@@ -329,7 +321,7 @@ private:
     std::string error_;
     
     int64_t fileSize_ = 0;
-    std::atomic<DownloadStatus> status_ = DownloadStatus::NONE;
+    DownloadStatus status_ = DownloadStatus::NONE;
     DownloadPriority priority_ = DownloadPriority::NORMAL;
     DownloadType type_ = DownloadType::REGULAR;
     

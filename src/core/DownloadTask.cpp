@@ -1,5 +1,5 @@
-#include "include/core/DownloadTask.h"
-#include "include/core/HttpClient.h"
+#include "core/DownloadTask.h"
+#include "core/HttpClient.h"
 #include "include/utils/UrlParser.h"
 #include "include/utils/Logger.h"
 #include "include/utils/FileUtils.h"
@@ -514,17 +514,14 @@ bool DownloadTask::loadMetadata() {
 }
 
 void DownloadTask::setStatus(DownloadStatus status) {
-    // Update status
+    std::lock_guard<std::mutex> lock(mutex_);
     DownloadStatus oldStatus = status_;
     status_ = status;
-    
     // Log status change
-    dm::utils::Logger::info("Download status changed: " + url_ + " -> " + 
-                          std::to_string(static_cast<int>(status)));
-    
+    dm::utils::Logger::info("Download status changed: " + url_ + " -> " + std::to_string(static_cast<int>(status)));
     // Call status change callback if provided
     if (statusChangeCallback_ && oldStatus != status) {
-        statusChangeCallback_(status);
+        statusChangeCallback_(shared_from_this(), oldStatus, status);
     }
 }
 

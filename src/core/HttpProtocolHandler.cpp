@@ -1,5 +1,5 @@
 #include "include/core/HttpProtocolHandler.h"
-#include "include/core/DownloadTask.h"
+#include "core/DownloadTask.h"
 #include "include/utils/Logger.h"
 #include "include/utils/UrlParser.h"
 #include "include/utils/FileUtils.h"

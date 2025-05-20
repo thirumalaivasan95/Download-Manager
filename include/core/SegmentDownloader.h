@@ -8,7 +8,7 @@
 #include <thread>
 #include <mutex>
 #include <chrono>
-#include "include/core/HttpClient.h"
+#include "core/HttpClient.h"
 
 namespace dm {
 namespace core {

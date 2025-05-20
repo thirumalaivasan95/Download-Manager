@@ -9,7 +9,7 @@
 #include <atomic>
 #include <functional>
 
-#include "include/core/DownloadTask.h"
+#include "core/DownloadTask.h"
 
 namespace dm {
 namespace core {
@@ -168,9 +168,10 @@ private:
      * @brief Task status change handler
      * 
      * @param task The task that changed status
-     * @param status The new status
+     * @param oldStatus The previous status
+     * @param newStatus The new status
      */
-    void onTaskStatusChanged(std::shared_ptr<DownloadTask> task, DownloadStatus status);
+    void onTaskStatusChanged(std::shared_ptr<DownloadTask> task, DownloadStatus oldStatus, DownloadStatus newStatus);
     
     /**
      * @brief Count active downloads

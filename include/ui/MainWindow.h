@@ -13,8 +13,8 @@
 #include <QMap>
 #include <memory>
 
-#include "include/core/DownloadManager.h"
-#include "include/core/DownloadTask.h"
+#include "core/DownloadManager.h"
+#include "core/DownloadTask.h"
 
 namespace dm {
 namespace ui {

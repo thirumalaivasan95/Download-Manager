@@ -1,5 +1,5 @@
 #include "include/plugin/PluginSystem.h"
-#include "include/core/DownloadManager.h"
+#include "core/DownloadManager.h"
 #include "include/utils/Logger.h"
 #include "include/utils/FileUtils.h"
 

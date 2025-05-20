@@ -11,7 +11,7 @@
 #include <QLibraryInfo>
 #include <QSettings>
 
-#include "include/core/DownloadManager.h"
+#include "core/DownloadManager.h"
 #include "include/ui/MainWindow.h"
 #include "include/utils/Logger.h"
 
@@ -33,7 +33,7 @@ bool initializeApplication() {
     
     // Initialize logger
     try {
-        dm::utils::Logger::initialize(appDataDir.filePath("log.txt"));
+        dm::utils::Logger::initialize(appDataDir.filePath("log.txt").toStdString());
     } catch (const std::exception& e) {
         QMessageBox::warning(nullptr, "Warning", 
                             QString("Failed to initialize logger: %1").arg(e.what()));

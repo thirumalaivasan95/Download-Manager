@@ -8,7 +8,7 @@
 #include <QTimer>
 #include <memory>
 
-#include "include/core/DownloadTask.h"
+#include "core/DownloadTask.h"
 #include "include/ui/ProgressBar.h"
 
 namespace dm {

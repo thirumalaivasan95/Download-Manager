@@ -10,9 +10,9 @@
 #include <thread>
 #include <functional>
 
-#include "include/core/DownloadTask.h"
-#include "include/core/DownloadQueue.h"
-#include "include/core/Settings.h"
+#include "core/DownloadTask.h"
+#include "core/DownloadQueue.h"
+#include "core/Settings.h"
 
 namespace dm {
 namespace core {

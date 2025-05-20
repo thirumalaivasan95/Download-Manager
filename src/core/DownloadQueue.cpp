@@ -1,4 +1,4 @@
-#include "include/core/DownloadQueue.h"
+#include "core/DownloadQueue.h"
 #include "include/utils/Logger.h"
 
 namespace dm {
@@ -23,34 +23,21 @@ void DownloadQueue::addTask(std::shared_ptr<DownloadTask> task) {
     if (!task) {
         return;
     }
-    
     std::lock_guard<std::mutex> lock(mutex_);
-    
-    // Get task ID
     std::string taskId = task->getId();
-    
-    // Check if task already exists
     if (tasks_.find(taskId) != tasks_.end()) {
         dm::utils::Logger::warning("Task already exists in queue: " + taskId);
         return;
     }
-    
-    // Add task to map
     tasks_[taskId] = task;
-    
-    // Set status change callback
-    task->setStatusChangeCallback(std::bind(&DownloadQueue::onTaskStatusChanged, this, 
-                                          std::placeholders::_1, std::placeholders::_2));
-    
-    // Add to pending tasks if status is QUEUED
+    // Set status change callback with new signature
+    task->setStatusChangeCallback([this](std::shared_ptr<DownloadTask> t, DownloadStatus oldStatus, DownloadStatus newStatus) {
+        this->onTaskStatusChanged(t, oldStatus, newStatus);
+    });
     if (task->getStatus() == DownloadStatus::QUEUED) {
         pendingTasks_.push(taskId);
     }
-    
-    // Log task addition
     dm::utils::Logger::info("Task added to queue: " + taskId);
-    
-    // Process queue
     processQueue();
 }
 
@@ -398,18 +385,19 @@ void DownloadQueue::setQueueProcessorCallback(QueueProcessorCallback callback) {
     queueProcessorCallback_ = callback;
 }
 
-void DownloadQueue::onTaskStatusChanged(std::shared_ptr<DownloadTask> task, DownloadStatus status) {
+void DownloadQueue::onTaskStatusChanged(std::shared_ptr<DownloadTask> task, DownloadStatus oldStatus, DownloadStatus newStatus) {
     std::lock_guard<std::mutex> lock(mutex_);
-    
-    // Update active downloads count
-    if (status == DownloadStatus::DOWNLOADING) {
+    // Update active downloads count based on transitions
+    if (newStatus == DownloadStatus::DOWNLOADING && oldStatus != DownloadStatus::DOWNLOADING) {
         activeDownloads_++;
-    } else if (task->getStatus() == DownloadStatus::DOWNLOADING) {
-        activeDownloads_--;
+        dm::utils::Logger::debug("Active downloads incremented: " + std::to_string(activeDownloads_));
+    } else if (oldStatus == DownloadStatus::DOWNLOADING && newStatus != DownloadStatus::DOWNLOADING) {
+        if (activeDownloads_ > 0) activeDownloads_--;
+        dm::utils::Logger::debug("Active downloads decremented: " + std::to_string(activeDownloads_));
     }
-    
-    // Process queue
+    // Always process the queue after a status change
     processQueue();
+    dm::utils::Logger::info("Task status changed: " + task->getId() + " from " + std::to_string(static_cast<int>(oldStatus)) + " to " + std::to_string(static_cast<int>(newStatus)));
 }
 
 int DownloadQueue::countActiveDownloads() {

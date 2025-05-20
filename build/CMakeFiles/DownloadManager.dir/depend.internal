@@ -193,6 +193,9 @@ CMakeFiles/DownloadManager.dir/src/core/DownloadManager.cpp.o
  ../include/core/HttpClient.h
  ../include/core/SegmentDownloader.h
  ../include/core/Settings.h
+ ../include/utils/FileUtils.h
+ ../include/utils/Logger.h
+ ../include/utils/UrlParser.h
  /workspaces/Download-Manager/src/core/DownloadManager.cpp
 CMakeFiles/DownloadManager.dir/src/core/DownloadQueue.cpp.o
  ../include/core/DownloadQueue.h

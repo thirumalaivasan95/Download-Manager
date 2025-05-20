@@ -1,7 +1,7 @@
 #include "core/DownloadManager.h"
-#include "include/utils/Logger.h"
-#include "include/utils/FileUtils.h"
-#include "include/utils/UrlParser.h"
+#include "utils/Logger.h"
+#include "utils/FileUtils.h"
+#include "utils/UrlParser.h"
 
 #include <fstream>
 #include <json/json.h> // Using jsoncpp library for task serialization

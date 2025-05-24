@@ -1,0 +1,48 @@
+# Build and binary files
+build/
+*.o
+*.obj
+*.so
+*.dll
+*.exe
+*.out
+*.a
+*.lib
+*.pdb
+*.mod
+*.cmake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Qt resource and translation files
+*.qrc.depends
+*.qm
+
+# User and system files
+*.user
+*.DS_Store
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+log.txt
+
+# IDE and editor files
+.vscode/
+.idea/
+*.code-workspace
+
+# Misc
+*.bak
+*.tmp
+
+# Ignore generated resource files
+qrc_*.cpp
+
+# Ignore compiled Python files (if any)
+__pycache__/
+*.pyc

@@ -1,5 +1,6 @@
 # Ignore build artifacts and generated files
-build/
+/build/
+/build/**
 *.o
 *.obj
 *.so
@@ -11,10 +12,10 @@ build/
 *.pdb
 *.mod
 *.cmake
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-Makefile
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/Makefile
 
 # Qt resource and translation files
 *.qrc.depends

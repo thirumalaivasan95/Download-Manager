@@ -1,8 +1,8 @@
 #include "core/DownloadTask.h"
 #include "core/HttpClient.h"
-#include "include/utils/UrlParser.h"
-#include "include/utils/Logger.h"
-#include "include/utils/FileUtils.h"
+#include "utils/Logger.h"
+#include "utils/FileUtils.h"
+#include "utils/UrlParser.h"
 
 #include <fstream>
 #include <sstream>

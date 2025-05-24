@@ -9,8 +9,6 @@
 #include <QMessageBox>
 #include <QTranslator>
 #include <QLibraryInfo>
-#include <QSettings>
-
 #include "core/DownloadManager.h"
 #include "include/ui/MainWindow.h"
 #include "include/utils/Logger.h"

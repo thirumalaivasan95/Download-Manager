@@ -307,14 +307,14 @@ void DownloadManager::setTaskRemovedCallback(TaskRemovedCallback callback) {
 
 void DownloadManager::setTaskStatusChangedCallback(TaskStatusChangedCallback callback) {
     taskStatusChangedCallback_ = callback;
-    
     // Set the callback for existing tasks
     std::lock_guard<std::mutex> lock(tasksMutex_);
     for (const auto& pair : tasks_) {
-        pair.second->setStatusChangeCallback([this, callback](DownloadStatus status) {
-            auto task = std::static_pointer_cast<DownloadTask>(
-                std::shared_ptr<void>(nullptr, [](void*) {})); // Create a fake shared_ptr to this
-            this->onTaskStatusChanged(task, status);
+        // The lambda must match StatusChangeCallback: (shared_ptr<DownloadTask>, DownloadStatus, DownloadStatus)
+        pair.second->setStatusChangeCallback([this, callback, task=pair.second](std::shared_ptr<DownloadTask> t, DownloadStatus oldStatus, DownloadStatus newStatus) {
+            // Forward to the DownloadManager's callback
+            if (callback) callback(t, newStatus);
+            this->onTaskStatusChanged(t, newStatus);
         });
     }
 }

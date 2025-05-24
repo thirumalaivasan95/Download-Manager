@@ -1,5 +1,5 @@
 #include "core/DownloadQueue.h"
-#include "include/utils/Logger.h"
+#include "utils/Logger.h"
 
 namespace dm {
 namespace core {

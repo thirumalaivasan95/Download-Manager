@@ -15,6 +15,17 @@ find_package(CURL REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 
+# Find jsoncpp
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(JSONCPP jsoncpp)
+
+if (JSONCPP_FOUND)
+    include_directories(${JSONCPP_INCLUDE_DIRS})
+    link_directories(${JSONCPP_LIBRARY_DIRS})
+else()
+    message(FATAL_ERROR "jsoncpp not found")
+endif()
+
 # Set files to be compiled
 set(SOURCES
     main.cpp
@@ -76,6 +87,7 @@ target_link_libraries(${PROJECT_NAME}
     ${CURL_LIBRARIES}
     ${OPENSSL_LIBRARIES}
     Threads::Threads
+    ${JSONCPP_LIBRARIES}
 )
 
 # Installation

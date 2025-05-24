@@ -8,6 +8,9 @@
 #include <sstream>
 #include <cstring>
 #include <algorithm>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 namespace DownloadManager {
 namespace Core {
@@ -24,16 +27,14 @@ bool FileManager::createFile(const std::string& filePath, int64_t fileSize) {
     try {
         // Ensure the directory exists
         if (!ensureDirectoryExists(filePath)) {
-            dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-                "Failed to create directory for: " + filePath);
+            dm::utils::Logger::error("Failed to create directory for: " + filePath);
             return false;
         }
         
         // Create the file with specified size
         std::ofstream file(filePath, std::ios::binary | std::ios::out);
         if (!file.is_open()) {
-            dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-                "Failed to create file: " + filePath);
+            dm::utils::Logger::error("Failed to create file: " + filePath);
             return false;
         }
         
@@ -49,8 +50,7 @@ bool FileManager::createFile(const std::string& filePath, int64_t fileSize) {
         return true;
     } 
     catch (const std::exception& e) {
-        dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-            "Exception in createFile: " + std::string(e.what()));
+        dm::utils::Logger::error(std::string("Exception in createFile: ") + e.what());
         return false;
     }
 }
@@ -59,8 +59,7 @@ bool FileManager::writeToFile(const std::string& filePath, const char* data, int
     try {
         std::fstream file(filePath, std::ios::binary | std::ios::in | std::ios::out);
         if (!file.is_open()) {
-            dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-                "Failed to open file for writing: " + filePath);
+            dm::utils::Logger::error("Failed to open file for writing: " + filePath);
             return false;
         }
         
@@ -72,8 +71,7 @@ bool FileManager::writeToFile(const std::string& filePath, const char* data, int
         
         // Check if write was successful
         if (file.fail()) {
-            dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-                "Failed to write data to file: " + filePath);
+            dm::utils::Logger::error("Failed to write data to file: " + filePath);
             return false;
         }
         
@@ -81,8 +79,7 @@ bool FileManager::writeToFile(const std::string& filePath, const char* data, int
         return true;
     } 
     catch (const std::exception& e) {
-        dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-            "Exception in writeToFile: " + std::string(e.what()));
+        dm::utils::Logger::error(std::string("Exception in writeToFile: ") + e.what());
         return false;
     }
 }
@@ -104,8 +101,7 @@ bool FileManager::isFileResumeValid(const std::string& filePath) {
         return true;
     } 
     catch (const std::exception& e) {
-        dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-            "Exception in isFileResumeValid: " + std::string(e.what()));
+        dm::utils::Logger::error("Exception in isFileResumeValid: " + std::string(e.what()));
         return false;
     }
 }
@@ -119,8 +115,7 @@ int64_t FileManager::getFileSize(const std::string& filePath) {
         return fs::file_size(filePath);
     } 
     catch (const std::exception& e) {
-        dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-            "Exception in getFileSize: " + std::string(e.what()));
+        dm::utils::Logger::error("Exception in getFileSize: " + std::string(e.what()));
         return -1;
     }
 }
@@ -132,8 +127,7 @@ std::string FileManager::createTempFile(const std::string& originalFilePath) {
         // Create an empty file
         std::ofstream file(tempFilePath, std::ios::binary);
         if (!file.is_open()) {
-            dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-                "Failed to create temporary file: " + tempFilePath);
+            dm::utils::Logger::error("Failed to create temporary file: " + tempFilePath);
             return "";
         }
         
@@ -141,8 +135,7 @@ std::string FileManager::createTempFile(const std::string& originalFilePath) {
         return tempFilePath;
     } 
     catch (const std::exception& e) {
-        dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-            "Exception in createTempFile: " + std::string(e.what()));
+        dm::utils::Logger::error("Exception in createTempFile: " + std::string(e.what()));
         return "";
     }
 }
@@ -151,8 +144,7 @@ bool FileManager::finalizeDownload(const std::string& tempFilePath, const std::s
     try {
         // Ensure the target directory exists
         if (!ensureDirectoryExists(targetFilePath)) {
-            dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-                "Failed to create directory for target file: " + targetFilePath);
+            dm::utils::Logger::error("Failed to create directory for target file: " + targetFilePath);
             return false;
         }
         
@@ -167,8 +159,7 @@ bool FileManager::finalizeDownload(const std::string& tempFilePath, const std::s
         return true;
     } 
     catch (const std::exception& e) {
-        dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-            "Exception in finalizeDownload: " + std::string(e.what()));
+        dm::utils::Logger::error("Exception in finalizeDownload: " + std::string(e.what()));
         return false;
     }
 }
@@ -176,21 +167,21 @@ bool FileManager::finalizeDownload(const std::string& tempFilePath, const std::s
 bool FileManager::checkFileIntegrity(const std::string& filePath, const std::string& expectedHash, const std::string& hashType) {
     try {
         // Calculate file hash
-        Utils::HashCalculator hashCalculator;
+        dm::utils::HashCalculator hashCalculator;
         std::string calculatedHash;
         
+        // Replace direct calls to calculateMD5, calculateSHA1, calculateSHA256 with calculateHash and the appropriate enum
         if (hashType == "MD5") {
-            calculatedHash = hashCalculator.calculateMD5(filePath);
+            calculatedHash = hashCalculator.calculateHash(filePath, dm::utils::HashAlgorithm::MD5);
         } 
         else if (hashType == "SHA1") {
-            calculatedHash = hashCalculator.calculateSHA1(filePath);
+            calculatedHash = hashCalculator.calculateHash(filePath, dm::utils::HashAlgorithm::SHA1);
         } 
         else if (hashType == "SHA256") {
-            calculatedHash = hashCalculator.calculateSHA256(filePath);
+            calculatedHash = hashCalculator.calculateHash(filePath, dm::utils::HashAlgorithm::SHA256);
         } 
         else {
-            dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-                "Unsupported hash type: " + hashType);
+            dm::utils::Logger::error("Unsupported hash type: " + hashType);
             return false;
         }
         
@@ -203,8 +194,7 @@ bool FileManager::checkFileIntegrity(const std::string& filePath, const std::str
         return expectedHashLower == calculatedHashLower;
     } 
     catch (const std::exception& e) {
-        dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-            "Exception in checkFileIntegrity: " + std::string(e.what()));
+        dm::utils::Logger::error("Exception in checkFileIntegrity: " + std::string(e.what()));
         return false;
     }
 }
@@ -215,8 +205,7 @@ int64_t FileManager::getAvailableDiskSpace(const std::string& directoryPath) {
         return static_cast<int64_t>(spaceInfo.available);
     } 
     catch (const std::exception& e) {
-        dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-            "Exception in getAvailableDiskSpace: " + std::string(e.what()));
+        dm::utils::Logger::error("Exception in getAvailableDiskSpace: " + std::string(e.what()));
         return -1;
     }
 }
@@ -227,8 +216,7 @@ std::vector<std::string> FileManager::splitFileIntoSegments(const std::string& f
     try {
         // Validate file
         if (!fs::exists(filePath)) {
-            dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-                "File does not exist: " + filePath);
+            dm::utils::Logger::error("File does not exist: " + filePath);
             return segmentPaths;
         }
         
@@ -242,8 +230,7 @@ std::vector<std::string> FileManager::splitFileIntoSegments(const std::string& f
         // Open source file
         std::ifstream srcFile(filePath, std::ios::binary);
         if (!srcFile.is_open()) {
-            dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-                "Failed to open source file: " + filePath);
+            dm::utils::Logger::error("Failed to open source file: " + filePath);
             return segmentPaths;
         }
         
@@ -261,8 +248,7 @@ std::vector<std::string> FileManager::splitFileIntoSegments(const std::string& f
             // Open segment file
             std::ofstream segmentFile(segmentPath, std::ios::binary);
             if (!segmentFile.is_open()) {
-                dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-                    "Failed to create segment file: " + segmentPath);
+                dm::utils::Logger::error("Failed to create segment file: " + segmentPath);
                 continue;
             }
             
@@ -290,8 +276,7 @@ std::vector<std::string> FileManager::splitFileIntoSegments(const std::string& f
         srcFile.close();
     } 
     catch (const std::exception& e) {
-        dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-            "Exception in splitFileIntoSegments: " + std::string(e.what()));
+        dm::utils::Logger::error("Exception in splitFileIntoSegments: " + std::string(e.what()));
     }
     
     return segmentPaths;
@@ -301,16 +286,14 @@ bool FileManager::mergeFileSegments(const std::vector<std::string>& segmentPaths
     try {
         // Ensure the output directory exists
         if (!ensureDirectoryExists(outputFilePath)) {
-            dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-                "Failed to create directory for output file: " + outputFilePath);
+            dm::utils::Logger::error("Failed to create directory for output file: " + outputFilePath);
             return false;
         }
         
         // Create output file
         std::ofstream outputFile(outputFilePath, std::ios::binary);
         if (!outputFile.is_open()) {
-            dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-                "Failed to create output file: " + outputFilePath);
+            dm::utils::Logger::error("Failed to create output file: " + outputFilePath);
             return false;
         }
         
@@ -320,8 +303,7 @@ bool FileManager::mergeFileSegments(const std::vector<std::string>& segmentPaths
         for (const auto& segmentPath : segmentPaths) {
             // Validate segment file
             if (!fs::exists(segmentPath)) {
-                dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-                    "Segment file does not exist: " + segmentPath);
+                dm::utils::Logger::error("Segment file does not exist: " + segmentPath);
                 outputFile.close();
                 fs::remove(outputFilePath);
                 return false;
@@ -330,8 +312,7 @@ bool FileManager::mergeFileSegments(const std::vector<std::string>& segmentPaths
             // Open segment file
             std::ifstream segmentFile(segmentPath, std::ios::binary);
             if (!segmentFile.is_open()) {
-                dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-                    "Failed to open segment file: " + segmentPath);
+                dm::utils::Logger::error("Failed to open segment file: " + segmentPath);
                 outputFile.close();
                 fs::remove(outputFilePath);
                 return false;
@@ -356,8 +337,7 @@ bool FileManager::mergeFileSegments(const std::vector<std::string>& segmentPaths
         return true;
     } 
     catch (const std::exception& e) {
-        dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-            "Exception in mergeFileSegments: " + std::string(e.what()));
+        dm::utils::Logger::error("Exception in mergeFileSegments: " + std::string(e.what()));
         return false;
     }
 }
@@ -374,8 +354,7 @@ bool FileManager::ensureDirectoryExists(const std::string& filePath) {
         return true;
     } 
     catch (const std::exception& e) {
-        dm::utils::Logger::instance().log(Utils::LogLevel::ERROR, 
-            "Exception in ensureDirectoryExists: " + std::string(e.what()));
+        dm::utils::Logger::error("Exception in ensureDirectoryExists: " + std::string(e.what()));
         return false;
     }
 }

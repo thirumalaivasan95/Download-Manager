@@ -1,4 +1,4 @@
-#include "include/ui/DownloadItemWidget.h"
+#include "ui/DownloadItemWidget.h"
 #include "include/utils/FileUtils.h"
 
 #include <QVBoxLayout>

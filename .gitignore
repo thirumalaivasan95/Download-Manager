@@ -1,4 +1,4 @@
-# Build and binary files
+# Ignore build artifacts and generated files
 build/
 *.o
 *.obj

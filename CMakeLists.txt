@@ -26,6 +26,11 @@ else()
     message(FATAL_ERROR "jsoncpp not found")
 endif()
 
+# If JSONCPP_INCLUDE_DIRS is empty, add the default path for Ubuntu
+if (NOT JSONCPP_INCLUDE_DIRS)
+    include_directories(/usr/include/jsoncpp)
+endif()
+
 # Set files to be compiled
 set(SOURCES
     main.cpp
@@ -89,6 +94,13 @@ target_link_libraries(${PROJECT_NAME}
     Threads::Threads
     ${JSONCPP_LIBRARIES}
 )
+
+# Check for GCC version and link stdc++fs if needed for filesystem support
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
+        target_link_libraries(${PROJECT_NAME} stdc++fs)
+    endif()
+endif()
 
 # Installation
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)

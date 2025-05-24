@@ -1,8 +1,8 @@
-#include "include/ui/MainWindow.h"
-#include "include/ui/AddDownloadDialog.h"
-#include "include/ui/SettingsDialog.h"
-#include "include/utils/FileUtils.h"
-#include "include/utils/Logger.h"
+#include "ui/MainWindow.h"
+#include "ui/AddDownloadDialog.h"
+#include "ui/SettingsDialog.h"
+#include "utils/FileUtils.h"
+#include "utils/Logger.h"
 
 #include <QMessageBox>
 #include <QFileDialog>
@@ -19,6 +19,7 @@
 #include <QDir>
 #include <QApplication>
 #include <QProgressBar>
+#include <QTextStream>
 #include <QTime>
 #include <QColorDialog>
 #include <QFontDialog>
@@ -697,7 +698,7 @@ void MainWindow::updateDownloadInUi(std::shared_ptr<dm::core::DownloadTask> task
     // Set size
     QString sizeText;
     if (task->getFileSize() > 0) {
-        sizeText = dm::utils::FileUtils::formatFileSize(task->getFileSize());
+        sizeText = QString::fromStdString(dm::utils::FileUtils::formatFileSize(task->getFileSize()));
     } else {
         sizeText = "Unknown";
     }
@@ -710,7 +711,7 @@ void MainWindow::updateDownloadInUi(std::shared_ptr<dm::core::DownloadTask> task
     // Set speed
     QString speedText;
     if (status == dm::core::DownloadStatus::DOWNLOADING) {
-        speedText = dm::utils::FileUtils::formatFileSize(progress.downloadSpeed) + "/s";
+        speedText = QString::fromStdString(dm::utils::FileUtils::formatFileSize(progress.downloadSpeed)) + "/s";
     } else {
         speedText = "-";
     }

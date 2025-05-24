@@ -9,7 +9,7 @@
 #include <memory>
 
 #include "core/DownloadTask.h"
-#include "include/ui/ProgressBar.h"
+#include "ui/ProgressBar.h"
 
 namespace dm {
 namespace ui {

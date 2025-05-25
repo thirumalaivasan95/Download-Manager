@@ -28,6 +28,14 @@ public:
     explicit AddDownloadDialog(QWidget* parent = nullptr);
     
     /**
+     * @brief Construct a new AddDownloadDialog with URL
+     * 
+     * @param url The URL
+     * @param parent The parent widget
+     */
+    AddDownloadDialog(const QString& url, QWidget* parent = nullptr);
+    
+    /**
      * @brief Destroy the AddDownloadDialog
      */
     ~AddDownloadDialog();
@@ -105,6 +113,18 @@ private slots:
      * @brief Validate inputs
      */
     void validateInputs();
+    
+    // --- Methods implemented in AddDownloadDialog.cpp ---
+    void createUI();
+    void setupConnections();
+    void urlChanged();
+    void analyzeUrl();
+    void updateFileInfo(bool success, const QString& filename, qint64 size, const QString& contentType, bool resumable);
+    void showAnalysisError(const QString& errorMsg);
+    void browseSavePath();
+    void checkClipboard();
+    QString formatFileSize(qint64 size);
+    void accept() override;
     
 private:
     /**

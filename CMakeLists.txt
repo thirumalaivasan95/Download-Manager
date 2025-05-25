@@ -10,7 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Find required packages
-find_package(Qt5 COMPONENTS Core Gui Widgets Network REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Widgets Network Concurrent REQUIRED)
 find_package(CURL REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
@@ -89,6 +89,7 @@ target_link_libraries(${PROJECT_NAME}
     Qt5::Gui
     Qt5::Widgets
     Qt5::Network
+    Qt5::Concurrent
     ${CURL_LIBRARIES}
     ${OPENSSL_LIBRARIES}
     Threads::Threads

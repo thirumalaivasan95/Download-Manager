@@ -258,13 +258,13 @@ void AddDownloadDialog::analyzeUrl() {
     m_resumableLabel->setText(tr("Analyzing..."));
     
     // Get download manager instance
-    auto& downloadManager = Core::DownloadManager::instance();
+    dm::core::DownloadManager& downloadManager = dm::core::DownloadManager::instance();
     
     // Analyze URL in a separate thread to avoid UI freezing
     QtConcurrent::run([this, url, &downloadManager]() {
         try {
             // Get file info
-            Core::DownloadFileInfo fileInfo;
+            dm::core::DownloadFileInfo fileInfo;
             bool success = downloadManager.getFileInfo(url.toStdString(), fileInfo);
             
             // Update UI in the main thread
@@ -431,7 +431,7 @@ void AddDownloadDialog::accept() {
     }
     
     // Create download options
-    Core::DownloadOptions options;
+    dm::core::DownloadOptions options;
     
     // Basic options
     options.url = url.toStdString();

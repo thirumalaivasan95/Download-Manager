@@ -7,6 +7,10 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QString>
+#include <QSpinBox>
+#include <QDateTimeEdit>
+
+#include "core/DownloadTypes.h"
 
 namespace dm {
 namespace ui {
@@ -24,6 +28,14 @@ public:
      * @param parent The parent widget
      */
     explicit AddDownloadDialog(QWidget* parent = nullptr);
+    
+    /**
+     * @brief Construct a new AddDownloadDialog with URL
+     * 
+     * @param url The URL
+     * @param parent The parent widget
+     */
+    AddDownloadDialog(const QString& url, QWidget* parent = nullptr);
     
     /**
      * @brief Destroy the AddDownloadDialog
@@ -104,6 +116,18 @@ private slots:
      */
     void validateInputs();
     
+    // --- Methods implemented in AddDownloadDialog.cpp ---
+    void createUI();
+    void setupConnections();
+    void urlChanged();
+    void analyzeUrl();
+    void updateFileInfo(bool success, const QString& filename, qint64 size, const QString& contentType, bool resumable);
+    void showAnalysisError(const QString& errorMsg);
+    void browseSavePath();
+    void checkClipboard();
+    QString formatFileSize(qint64 size);
+    void accept() override;
+    
 private:
     /**
      * @brief Set up the UI
@@ -118,15 +142,24 @@ private:
      */
     QString extractFilenameFromUrl(const QString& url);
     
-    // UI elements
-    QLineEdit* urlEdit_;
-    QLineEdit* destinationEdit_;
-    QLineEdit* filenameEdit_;
-    QCheckBox* startCheckBox_;
-    QPushButton* browseButton_;
-    QPushButton* okButton_;
-    QPushButton* cancelButton_;
-    QLabel* statusLabel_;
+    // UI elements (match implementation)
+    QLineEdit* m_urlEdit;
+    QLineEdit* m_filenameEdit;
+    QLineEdit* m_savePathEdit;
+    QLabel* m_fileSizeLabel;
+    QLabel* m_fileTypeLabel;
+    QLabel* m_resumableLabel;
+    QSpinBox* m_segmentsSpinBox;
+    QCheckBox* m_limitSpeedCheckBox;
+    QSpinBox* m_speedLimitSpinBox;
+    QCheckBox* m_authRequiredCheckBox;
+    QLineEdit* m_usernameEdit;
+    QLineEdit* m_passwordEdit;
+    QCheckBox* m_scheduleCheckBox;
+    QDateTimeEdit* m_scheduleDateTime;
+    QPushButton* m_startButton;
+    QPushButton* m_cancelButton_;
+    QLabel* m_statusLabel_;
 };
 
 } // namespace ui

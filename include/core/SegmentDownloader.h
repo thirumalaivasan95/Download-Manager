@@ -166,6 +166,27 @@ public:
      */
     const std::string& getUrl() const;
     
+    /**
+     * @brief Set the maximum number of retries
+     * 
+     * @param retries The maximum number of retries
+     */
+    void setMaxRetries(int retries) { maxRetries_ = retries; }
+    
+    /**
+     * @brief Get the maximum number of retries
+     * 
+     * @return int The maximum number of retries
+     */
+    int getMaxRetries() const { return maxRetries_; }
+    
+    /**
+     * @brief Get the current retry count
+     * 
+     * @return int The current retry count
+     */
+    int getRetryCount() const { return retryCount_; }
+    
 private:
     /**
      * @brief Download thread function
@@ -196,6 +217,13 @@ private:
     bool onProgress(int64_t downloadTotal, int64_t downloadedNow, 
                    int64_t uploadTotal, int64_t uploadedNow);
     
+    /**
+     * @brief Log memory usage
+     * 
+     * @param prefix The prefix for the log message
+     */
+    void logMemoryUsage(const std::string& prefix);
+    
     // Member variables
     std::string url_;
     std::string filePath_;
@@ -208,6 +236,9 @@ private:
     
     std::atomic<int64_t> downloadedBytes_ = 0;
     std::atomic<double> downloadSpeed_ = 0.0;
+    
+    int maxRetries_ = 3; // Default max retries per segment
+    int retryCount_ = 0;
     
     std::unique_ptr<std::thread> thread_;
     std::mutex mutex_;

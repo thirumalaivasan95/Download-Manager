@@ -250,6 +250,9 @@ public:
      */
     void updateProgress();
     
+    // Set max retries for all segments
+    void setSegmentMaxRetries(int retries);
+    
 private:
     /**
      * @brief Check if the server supports range requests
@@ -327,6 +330,7 @@ private:
     
     bool supportsResume_ = false;
     int segmentCount_ = 4;
+    int segmentMaxRetries_ = 3;
     
     std::chrono::system_clock::time_point startTime_;
     std::chrono::system_clock::time_point lastUpdateTime_;

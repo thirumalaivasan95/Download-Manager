@@ -257,6 +257,13 @@ void DownloadTask::setStatusChangeCallback(StatusChangeCallback callback) {
     statusChangeCallback_ = callback;
 }
 
+void DownloadTask::setSegmentMaxRetries(int retries) {
+    segmentMaxRetries_ = retries;
+    for (auto& segment : segments_) {
+        if (segment) segment->setMaxRetries(retries);
+    }
+}
+
 DownloadStatus DownloadTask::getStatus() const {
     return status_;
 }
@@ -443,6 +450,8 @@ bool DownloadTask::createSegments() {
             0
         );
         
+        segment->setMaxRetries(segmentMaxRetries_);
+        
         // Set callbacks
         segment->setCompletionCallback(std::bind(&DownloadTask::onSegmentCompleted, this, std::placeholders::_1));
         segment->setErrorCallback(std::bind(&DownloadTask::onSegmentError, this, std::placeholders::_1, std::placeholders::_2));
@@ -470,6 +479,8 @@ bool DownloadTask::createSegments() {
                 endByte,
                 i
             );
+            
+            segment->setMaxRetries(segmentMaxRetries_);
             
             // Set callbacks
             segment->setCompletionCallback(std::bind(&DownloadTask::onSegmentCompleted, this, std::placeholders::_1));

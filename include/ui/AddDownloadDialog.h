@@ -10,6 +10,8 @@
 #include <QSpinBox>
 #include <QDateTimeEdit>
 
+#include "core/DownloadTypes.h"
+
 namespace dm {
 namespace ui {
 

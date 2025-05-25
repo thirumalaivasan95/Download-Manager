@@ -4,6 +4,8 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <iostream>
+#include <unistd.h>
 
 namespace dm {
 namespace core {
@@ -175,87 +177,99 @@ const std::string& SegmentDownloader::getUrl() const {
     return url_;
 }
 
+void SegmentDownloader::logMemoryUsage(const std::string& prefix) {
+#ifdef __linux__
+    std::ifstream statm("/proc/self/statm");
+    long size = 0, resident = 0;
+    statm >> size >> resident;
+    std::ostringstream log;
+    log << prefix << " [PID " << getpid() << "] Memory usage: "
+        << "size=" << size << " pages, resident=" << resident << " pages";
+    dm::utils::Logger::debug(log.str());
+#endif
+}
+
 void SegmentDownloader::downloadThread() {
-    // Set status to downloading
-    setStatus(SegmentStatus::DOWNLOADING);
-    
-    try {
-        // Calculate bytes to download
-        int64_t bytesToDownload = endByte_ - startByte_ + 1;
-        
-        // Set downloaded bytes to zero
-        downloadedBytes_ = 0;
-        lastDownloadedBytes_ = 0;
-        
-        // Set progress callback
-        httpClient_->setProgressCallback(
-            [this](int64_t downloadTotal, int64_t downloadedNow, int64_t uploadTotal, int64_t uploadedNow) -> bool {
-                return this->onProgress(downloadTotal, downloadedNow, uploadTotal, uploadedNow);
-            }
-        );
-        
-        // Download the segment
-        bool success = httpClient_->downloadFileSegment(
-            url_,
-            filePath_,
-            startByte_,
-            endByte_,
-            nullptr // We're using the progress callback directly
-        );
-        
-        // Check if download was successful
-        if (success && !stopRequested_) {
-            // Set status to completed
-            setStatus(SegmentStatus::COMPLETED);
-            
-            // Set downloaded bytes to total
-            downloadedBytes_ = bytesToDownload;
-            
-            // Call completion callback
-            if (completionCallback_) {
-                completionCallback_(shared_from_this());
-            }
-            
-            // Log segment completion
+    int attempt = 0;
+    bool success = false;
+    std::string lastError;
+    logMemoryUsage("[Segment " + std::to_string(id_) + "] Start download");
+    while (attempt < maxRetries_ && !stopRequested_) {
+        try {
+            attempt++;
+            retryCount_ = attempt;
             std::ostringstream log;
-            log << "Completed segment " << id_ << " for " << url_;
-            dm::utils::Logger::debug(log.str());
-        } else if (stopRequested_) {
-            // Set status to paused
-            setStatus(SegmentStatus::PAUSED);
-            
-            // Log segment pause
-            std::ostringstream log;
-            log << "Paused segment " << id_ << " for " << url_;
-            dm::utils::Logger::debug(log.str());
-        } else {
-            // Set status to error
+            log << "Attempt " << attempt << "/" << maxRetries_ << " for segment " << id_ << " (" << url_ << ")";
+            dm::utils::Logger::info(log.str());
+            // Calculate bytes to download
+            int64_t bytesToDownload = endByte_ - startByte_ + 1;
+            downloadedBytes_ = 0;
+            lastDownloadedBytes_ = 0;
+            httpClient_->setProgressCallback(
+                [this](int64_t downloadTotal, int64_t downloadedNow, int64_t uploadTotal, int64_t uploadedNow) -> bool {
+                    return this->onProgress(downloadTotal, downloadedNow, uploadTotal, uploadedNow);
+                }
+            );
+            success = httpClient_->downloadFileSegment(
+                url_,
+                filePath_,
+                startByte_,
+                endByte_,
+                nullptr
+            );
+            if (success && !stopRequested_) {
+                setStatus(SegmentStatus::COMPLETED);
+                downloadedBytes_ = bytesToDownload;
+                if (completionCallback_) {
+                    completionCallback_(shared_from_this());
+                }
+                std::ostringstream log;
+                log << "Completed segment " << id_ << " for " << url_ << " on attempt " << attempt;
+                dm::utils::Logger::debug(log.str());
+                break;
+            } else if (stopRequested_) {
+                setStatus(SegmentStatus::PAUSED);
+                std::ostringstream log;
+                log << "Paused segment " << id_ << " for " << url_;
+                dm::utils::Logger::debug(log.str());
+                break;
+            } else {
+                setStatus(SegmentStatus::ERROR);
+                lastError = "Download failed";
+                std::ostringstream log;
+                log << "Failed to download segment " << id_ << " for " << url_ << " (attempt " << attempt << ")";
+                dm::utils::Logger::error(log.str());
+                if (errorCallback_) {
+                    errorCallback_(shared_from_this(), "Download failed");
+                }
+            }
+        } catch (const std::exception& e) {
             setStatus(SegmentStatus::ERROR);
-            
-            // Call error callback
-            if (errorCallback_) {
-                errorCallback_(shared_from_this(), "Download failed");
-            }
-            
-            // Log segment error
+            lastError = e.what();
             std::ostringstream log;
-            log << "Failed to download segment " << id_ << " for " << url_;
+            log << "Exception in segment " << id_ << " for " << url_ << " (attempt " << attempt << "): " << e.what();
             dm::utils::Logger::error(log.str());
+            if (errorCallback_) {
+                errorCallback_(shared_from_this(), e.what());
+            }
         }
-    } catch (const std::exception& e) {
-        // Set status to error
+        if (attempt < maxRetries_ && !stopRequested_) {
+            std::ostringstream log;
+            log << "Retrying segment " << id_ << " for " << url_ << " (attempt " << (attempt+1) << ")";
+            dm::utils::Logger::warning(log.str());
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+        }
+    }
+    if (!success && !stopRequested_) {
         setStatus(SegmentStatus::ERROR);
-        
-        // Call error callback
         if (errorCallback_) {
-            errorCallback_(shared_from_this(), e.what());
+            errorCallback_(shared_from_this(), lastError.empty() ? "Download failed after retries" : lastError);
         }
-        
-        // Log segment error
         std::ostringstream log;
-        log << "Exception in segment " << id_ << " for " << url_ << ": " << e.what();
+        log << "Segment " << id_ << " failed after " << attempt << " attempts for " << url_;
         dm::utils::Logger::error(log.str());
     }
+    logMemoryUsage("[Segment " + std::to_string(id_) + "] End download");
 }
 
 void SegmentDownloader::setStatus(SegmentStatus status) {

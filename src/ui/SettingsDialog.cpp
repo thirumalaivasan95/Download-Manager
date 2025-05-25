@@ -1,7 +1,7 @@
-#include "include/ui/SettingsDialog.h"
+#include "ui/SettingsDialog.h"
 #include "core/DownloadManager.h"
-#include "include/utils/FileUtils.h"
-#include "include/utils/Logger.h"
+#include "utils/FileUtils.h"
+#include "utils/Logger.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>

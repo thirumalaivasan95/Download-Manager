@@ -1,8 +1,8 @@
-#include "../../include/ui/AddDownloadDialog.h"
-#include "../../include/utils/Logger.h"
-#include "../../include/utils/UrlParser.h"
-#include "../../include/utils/FileUtils.h"
-#include "../../include/core/DownloadManager.h"
+#include "ui/AddDownloadDialog.h"
+#include "utils/Logger.h"
+#include "utils/UrlParser.h"
+#include "utils/FileUtils.h"
+#include "core/DownloadManager.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -22,8 +22,8 @@
 #include <QDialogButtonBox>
 #include <QIcon>
 
-namespace DownloadManager {
-namespace UI {
+namespace dm {
+namespace ui {
 
 AddDownloadDialog::AddDownloadDialog(QWidget* parent) : QDialog(parent) {
     setWindowTitle(tr("Add New Download"));
@@ -468,5 +468,5 @@ void AddDownloadDialog::accept() {
     }
 }
 
-} // namespace UI
-} // namespace DownloadManager
+} // namespace ui
+} // namespace dm

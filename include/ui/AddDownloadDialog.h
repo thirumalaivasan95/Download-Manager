@@ -7,6 +7,8 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QString>
+#include <QSpinBox>
+#include <QDateTimeEdit>
 
 namespace dm {
 namespace ui {
@@ -118,15 +120,24 @@ private:
      */
     QString extractFilenameFromUrl(const QString& url);
     
-    // UI elements
-    QLineEdit* urlEdit_;
-    QLineEdit* destinationEdit_;
-    QLineEdit* filenameEdit_;
-    QCheckBox* startCheckBox_;
-    QPushButton* browseButton_;
-    QPushButton* okButton_;
-    QPushButton* cancelButton_;
-    QLabel* statusLabel_;
+    // UI elements (match implementation)
+    QLineEdit* m_urlEdit;
+    QLineEdit* m_filenameEdit;
+    QLineEdit* m_savePathEdit;
+    QLabel* m_fileSizeLabel;
+    QLabel* m_fileTypeLabel;
+    QLabel* m_resumableLabel;
+    QSpinBox* m_segmentsSpinBox;
+    QCheckBox* m_limitSpeedCheckBox;
+    QSpinBox* m_speedLimitSpinBox;
+    QCheckBox* m_authRequiredCheckBox;
+    QLineEdit* m_usernameEdit;
+    QLineEdit* m_passwordEdit;
+    QCheckBox* m_scheduleCheckBox;
+    QDateTimeEdit* m_scheduleDateTime;
+    QPushButton* m_startButton;
+    QPushButton* m_cancelButton_;
+    QLabel* m_statusLabel_;
 };
 
 } // namespace ui

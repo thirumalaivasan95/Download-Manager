@@ -214,7 +214,7 @@ void AddDownloadDialog::setupConnections() {
     }
     
     if (browseButton) {
-        connect(browseButton, &QPushButton::clicked, this, &AddDownloadDialog::browseSavePath);
+        connect(browseButton, &QPushButton::clicked, this, &AddDownloadDialog::browseDestination);
     }
     
     // Speed limit checkbox
@@ -245,7 +245,7 @@ void AddDownloadDialog::analyzeUrl() {
     // Validate URL
     dm::utils::UrlParser urlParser;
     auto parsedUrl = urlParser.parse(url.toStdString());
-    if (!parsedUrl.isValid) {
+    if (!parsedUrl.isValid()) {
         QMessageBox::warning(this, tr("Invalid URL"),
                            tr("The URL you entered is not valid. Please check and try again."));
         return;
@@ -341,7 +341,7 @@ void AddDownloadDialog::checkClipboard() {
     // Check if clipboard contains a URL
     dm::utils::UrlParser urlParser;
     auto parsedUrl = urlParser.parse(clipboardText.toStdString());
-    if (parsedUrl.isValid) {
+    if (parsedUrl.isValid()) {
         QMessageBox::StandardButton reply = QMessageBox::question(this,
             tr("URL Found in Clipboard"),
             tr("Would you like to use the URL from clipboard?\n\n%1").arg(clipboardText),
@@ -429,6 +429,44 @@ void AddDownloadDialog::accept() {
     // The addDownload method expects (const std::string& url, ...), not DownloadOptions
     downloadManager.addDownload(options.url, options.destination, options.username, !options.username.empty());
     QDialog::accept();
+}
+
+QString AddDownloadDialog::getUrl() const {
+    return m_urlEdit ? m_urlEdit->text() : QString();
+}
+
+QString AddDownloadDialog::getDestination() const {
+    return m_savePathEdit ? m_savePathEdit->text() : QString();
+}
+
+QString AddDownloadDialog::getFilename() const {
+    return m_filenameEdit ? m_filenameEdit->text() : QString();
+}
+
+bool AddDownloadDialog::getStartImmediately() const {
+    return m_startButton ? m_startButton->isEnabled() : false;
+}
+
+void AddDownloadDialog::setUrl(const QString& url) {
+    if (m_urlEdit) m_urlEdit->setText(url);
+}
+
+void AddDownloadDialog::onUrlChanged(const QString& url) {
+    Q_UNUSED(url);
+    validateInputs();
+}
+
+void AddDownloadDialog::browseDestination() {
+    QString dir = QFileDialog::getExistingDirectory(this, tr("Select Save Location"), m_savePathEdit ? m_savePathEdit->text() : QString(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    if (!dir.isEmpty() && m_savePathEdit) {
+        m_savePathEdit->setText(dir);
+    }
+}
+
+void AddDownloadDialog::validateInputs() {
+    // Simple validation: enable start if URL and filename are not empty
+    bool valid = m_urlEdit && !m_urlEdit->text().isEmpty() && m_filenameEdit && !m_filenameEdit->text().isEmpty();
+    if (m_startButton) m_startButton->setEnabled(valid);
 }
 
 } // namespace ui

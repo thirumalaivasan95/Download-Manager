@@ -9,6 +9,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+# Enable Qt's AUTOMOC for meta-object code generation
+set(CMAKE_AUTOMOC ON)
+
 # Find required packages
 find_package(Qt5 COMPONENTS Core Gui Widgets Network Concurrent REQUIRED)
 find_package(CURL REQUIRED)

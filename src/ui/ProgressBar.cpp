@@ -1,5 +1,5 @@
-#include "include/ui/ProgressBar.h"
-#include "include/utils/FileUtils.h"
+#include "ui/ProgressBar.h"
+#include "utils/FileUtils.h"
 
 #include <QPainter>
 #include <QPainterPath>

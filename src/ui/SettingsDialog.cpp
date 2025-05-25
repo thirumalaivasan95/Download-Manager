@@ -205,15 +205,16 @@ void SettingsDialog::setupUi() {
         if (!updatingUI_) applyButton_->setEnabled(true);
     });
     
-    connect(maxConcurrentDownloadsSpinBox_, &QSpinBox::valueChanged, [this]() {
+    connect(maxConcurrentDownloadsSpinBox_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int){
         if (!updatingUI_) applyButton_->setEnabled(true);
     });
-    
-    connect(segmentCountSpinBox_, &QSpinBox::valueChanged, [this]() {
+    connect(segmentCountSpinBox_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int){
         if (!updatingUI_) applyButton_->setEnabled(true);
     });
-    
-    connect(maxDownloadSpeedSpinBox_, &QSpinBox::valueChanged, [this]() {
+    connect(maxDownloadSpeedSpinBox_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int){
+        if (!updatingUI_) applyButton_->setEnabled(true);
+    });
+    connect(retryCountSpinBox_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int){
         if (!updatingUI_) applyButton_->setEnabled(true);
     });
     
@@ -249,10 +250,6 @@ void SettingsDialog::setupUi() {
     });
     
     connect(verifyDownloadsCheckBox_, &QCheckBox::stateChanged, [this]() {
-        if (!updatingUI_) applyButton_->setEnabled(true);
-    });
-    
-    connect(retryCountSpinBox_, &QSpinBox::valueChanged, [this]() {
         if (!updatingUI_) applyButton_->setEnabled(true);
     });
     

@@ -1,5 +1,5 @@
-#include "include/ui/SpeedLabel.h"
-#include "include/utils/FileUtils.h"
+#include "ui/SpeedLabel.h"
+#include "utils/FileUtils.h"
 
 #include <QFontMetrics>
 #include <cmath>

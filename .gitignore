@@ -16,6 +16,17 @@
 /CMakeCache.txt
 /cmake_install.cmake
 /Makefile
+# CMake dependency and intermediate files
+*.dir/
+*.depend
+*.depend.*
+*.internal
+*.Tlog
+*.idb
+*.ilk
+*.pch
+*.sbr
+*.unsaved
 
 # Qt resource and translation files
 *.qrc.depends

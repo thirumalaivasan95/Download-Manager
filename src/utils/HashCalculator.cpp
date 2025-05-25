@@ -1,6 +1,6 @@
-#include "include/utils/HashCalculator.h"
-#include "include/utils/Logger.h"
-#include "include/utils/FileUtils.h"
+#include "utils/HashCalculator.h"
+#include "utils/Logger.h"
+#include "utils/FileUtils.h"
 
 #include <openssl/md5.h>
 #include <openssl/sha.h>

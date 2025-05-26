@@ -71,123 +71,119 @@ bool HttpProtocolHandler::startDownload(const std::string& url,
         if (errorCallback) {
             errorCallback("Invalid task");
         }
+        utils::Logger::error("[HTTP] Download initiation failed: Invalid task");
         return false;
     }
     
-    utils::Logger::info("Starting HTTP download: " + url);
+    utils::Logger::info("[HTTP] Download started for URL: " + url);
+    logMemoryUsage("[HTTP] Before download: " + url);
     
     std::shared_ptr<HttpClient> client = std::make_shared<HttpClient>();
-    
-    // Configure the client based on options
     configureHttpClient(*client, options);
     
-    // Set progress callback
     auto progressFunc = [task, progressCallback, this](int64_t totalBytes, int64_t downloadedBytes, 
                                                     int64_t uploadTotal, int64_t uploadNow) -> bool {
         double speed = 0.0;
-        
-        // Calculate speed (bypassing division by zero)
         if (downloadedBytes > 0) {
             speed = static_cast<double>(downloadedBytes) / 
                    (std::chrono::duration_cast<std::chrono::milliseconds>(
                        std::chrono::system_clock::now() - task->getStartTime()).count() / 1000.0);
         }
-        
         if (progressCallback) {
             progressCallback(totalBytes, downloadedBytes, speed);
         }
-        
-        // Check if the task should be canceled
         return task->getStatus() != DownloadStatus::CANCELED && 
                task->getStatus() != DownloadStatus::PAUSED;
     };
-    
     client->setProgressCallback(progressFunc);
     
-    // Set data callback for streaming to file
     auto dataFunc = [outputFile, task](const char* data, size_t size) -> bool {
-        // Write data to file
-        // Note: In a real implementation, you would use FileManager here
         FILE* file = fopen(outputFile.c_str(), "ab");
         if (!file) {
+            dm::utils::Logger::error("[HTTP] File open failed: " + outputFile);
             return false;
         }
-        
         size_t written = fwrite(data, 1, size, file);
         fclose(file);
-        
-        // Return false if write failed or task was canceled
+        if (written != size) {
+            dm::utils::Logger::error("[HTTP] File write failed: " + outputFile);
+        }
         return (written == size) && 
                (task->getStatus() != DownloadStatus::CANCELED) && 
                (task->getStatus() != DownloadStatus::PAUSED);
     };
-    
     client->setDataCallback(dataFunc);
-    
-    // Store the client
     {
         std::lock_guard<std::mutex> lock(clientsMutex_);
         activeClients_[task->getId()] = client;
     }
-    
-    // Start download in a separate thread
-    std::thread downloadThread([this, client, url, outputFile, task, options, 
-                              progressCallback, errorCallback, statusCallback]() {
-        if (statusCallback) {
-            statusCallback("Connecting to server");
-        }
-        
-        // Check if file exists and supports resume
-        bool resumeSupport = supportsRangeRequests(url, options);
-        int64_t startByte = 0;
-        
-        if (resumeSupport && utils::FileUtils::fileExists(outputFile)) {
-            startByte = utils::FileUtils::getFileSize(outputFile);
-            if (statusCallback) {
-                statusCallback("Resuming download from byte " + std::to_string(startByte));
-            }
-        } else {
-            // Create a new file
-            FILE* file = fopen(outputFile.c_str(), "wb");
-            if (file) {
-                fclose(file);
-            } else {
-                if (errorCallback) {
-                    errorCallback("Failed to create output file: " + outputFile);
+    // Retry logic
+    int maxRetries = 3;
+    std::thread downloadThread([=, this]() {
+        int attempt = 0;
+        bool success = false;
+        std::string lastError;
+        while (attempt < maxRetries && !success) {
+            attempt++;
+            try {
+                if (statusCallback) statusCallback("Attempt " + std::to_string(attempt) + " of " + std::to_string(maxRetries));
+                utils::Logger::info("[HTTP] Download attempt " + std::to_string(attempt) + " for URL: " + url);
+                bool resumeSupport = supportsRangeRequests(url, options);
+                int64_t startByte = 0;
+                if (resumeSupport && utils::FileUtils::fileExists(outputFile)) {
+                    startByte = utils::FileUtils::getFileSize(outputFile);
+                    if (statusCallback) statusCallback("Resuming download from byte " + std::to_string(startByte));
+                } else {
+                    FILE* file = fopen(outputFile.c_str(), "wb");
+                    if (file) fclose(file);
+                    else {
+                        lastError = "Failed to create output file: " + outputFile;
+                        utils::Logger::error("[HTTP] " + lastError);
+                        if (errorCallback) errorCallback(lastError);
+                        break;
+                    }
                 }
-                
-                std::lock_guard<std::mutex> lock(clientsMutex_);
-                activeClients_.erase(task->getId());
-                return;
+                HttpResponse response;
+                if (startByte > 0) response = client->getRange(url, startByte, -1);
+                else response = client->get(url);
+                if (!handleHttpResponse(response, url, errorCallback)) {
+                    lastError = "HTTP response error for: " + url;
+                    utils::Logger::error("[HTTP] " + lastError);
+                    if (attempt < maxRetries) {
+                        utils::Logger::warning("[HTTP] Retrying download for: " + url);
+                        std::this_thread::sleep_for(std::chrono::seconds(2));
+                    }
+                    continue;
+                }
+                success = true;
+            } catch (const std::exception& ex) {
+                lastError = std::string("Exception: ") + ex.what();
+                utils::Logger::error("[HTTP] Exception during download: " + lastError);
+                if (attempt < maxRetries) {
+                    utils::Logger::warning("[HTTP] Retrying after exception for: " + url);
+                    std::this_thread::sleep_for(std::chrono::seconds(2));
+                }
+            } catch (...) {
+                lastError = "Unknown exception during download.";
+                utils::Logger::error("[HTTP] " + lastError);
+                if (attempt < maxRetries) {
+                    utils::Logger::warning("[HTTP] Retrying after unknown exception for: " + url);
+                    std::this_thread::sleep_for(std::chrono::seconds(2));
+                }
             }
         }
-        
-        HttpResponse response;
-        
-        if (startByte > 0) {
-            // Resume download
-            response = client->getRange(url, startByte, -1);
-        } else {
-            // Start new download
-            response = client->get(url);
-        }
-        
-        // Handle the HTTP response
-        if (!handleHttpResponse(response, url, errorCallback)) {
-            std::lock_guard<std::mutex> lock(clientsMutex_);
-            activeClients_.erase(task->getId());
-            return;
-        }
-        
-        if (statusCallback) {
-            statusCallback("Download completed");
-        }
-        
-        // Clean up
+        logMemoryUsage("[HTTP] After download: " + url);
         std::lock_guard<std::mutex> lock(clientsMutex_);
         activeClients_.erase(task->getId());
+        if (success) {
+            utils::Logger::info("[HTTP] Download complete for URL: " + url);
+            if (statusCallback) statusCallback("Download complete");
+        } else {
+            utils::Logger::error("[HTTP] Download failed for URL: " + url + ". Error: " + lastError);
+            if (errorCallback) errorCallback("Download failed: " + lastError);
+            if (statusCallback) statusCallback("Download failed");
+        }
     });
-    
     downloadThread.detach();
     return true;
 }

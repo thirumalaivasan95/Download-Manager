@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
+#include <algorithm>
 
 namespace dm {
 namespace utils {

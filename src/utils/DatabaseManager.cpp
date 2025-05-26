@@ -161,7 +161,7 @@ void DatabaseManager::initializeTables() {
         Logger::instance().log(LogLevel::INFO, "Database tables initialized");
     } 
     catch (const std::exception& e) {
-        Logger::instance().log(LogLevel::ERROR, "Failed to initialize database tables: " + std::string(e.what()));
+        Logger::instance().log(LogLevel::LOG_ERROR, "Failed to initialize database tables: " + std::string(e.what()));
         throw;
     }
 }
@@ -178,7 +178,7 @@ void DatabaseManager::execute(const std::string& sql) {
             sqlite3_free(errorMsg);
         }
         
-        Logger::instance().log(LogLevel::ERROR, error + " (SQL: " + sql + ")");
+        Logger::instance().log(LogLevel::LOG_ERROR, error + " (SQL: " + sql + ")");
         throw std::runtime_error(error);
     }
 }
@@ -200,7 +200,7 @@ bool DatabaseManager::executeWithCallback(const std::string& sql, sqlite3_callba
             sqlite3_free(errorMsg);
         }
         
-        Logger::instance().log(LogLevel::ERROR, error + " (SQL: " + sql + ")");
+        Logger::instance().log(LogLevel::LOG_ERROR, error + " (SQL: " + sql + ")");
         return false;
     }
     
@@ -360,7 +360,7 @@ int64_t DatabaseManager::getDatabaseSize() {
         return std::filesystem::file_size(m_dbPath);
     } 
     catch (const std::filesystem::filesystem_error& e) {
-        Logger::instance().log(LogLevel::ERROR, "Failed to get database size: " + std::string(e.what()));
+        Logger::instance().log(LogLevel::LOG_ERROR, "Failed to get database size: " + std::string(e.what()));
         return -1;
     }
 }

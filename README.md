@@ -67,6 +67,32 @@ cmake --build . --config Release
 # Optional: cmake --install .
 ```
 
+### Windows Build Notes (Qt6, MinGW/MSYS2)
+
+To build on Windows with Qt6 and MSYS2/MinGW, use the following CMake command (from your `build` directory):
+
+```powershell
+cmake -G "MinGW Makefiles" `
+  -DCMAKE_PREFIX_PATH="C:/Qt/6.9.0/mingw_64" `
+  -DOPENSSL_ROOT_DIR="C:/msys64/mingw64" `
+  -DOPENSSL_INCLUDE_DIR="C:/msys64/mingw64/include" `
+  -DOPENSSL_CRYPTO_LIBRARY="C:/msys64/mingw64/lib/libcrypto.a" `
+  -DOPENSSL_SSL_LIBRARY="C:/msys64/mingw64/lib/libssl.a" `
+  -DZLIB_LIBRARY="C:/msys64/mingw64/lib/libz.a" `
+  -DZLIB_INCLUDE_DIR="C:/msys64/mingw64/include" `
+  ..
+```
+
+- Make sure all DLLs you copy for deployment are from the same Qt and MinGW version you built with.
+- If you see missing DLL or entry point errors, clean your build directory and re-copy only the correct DLLs from your Qt and MinGW installation.
+- After building, you can use the following command to automatically copy all required Qt DLLs and plugins for deployment:
+
+```powershell
+& "C:\Qt\6.9.0\mingw_64\bin\windeployqt.exe" .\DownloadManager.exe
+```
+
+This will ensure your application runs on other Windows systems without missing DLL errors.
+
 #### macOS
 ```bash
 brew install cmake qt curl openssl jsoncpp

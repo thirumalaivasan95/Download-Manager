@@ -427,7 +427,7 @@ bool DownloadManager::saveTasks() {
                 case DownloadStatus::COMPLETED:
                     statusStr = "COMPLETED";
                     break;
-                case DownloadStatus::ERROR:
+                case DownloadStatus::DOWNLOAD_ERROR:
                     statusStr = "ERROR";
                     break;
                 case DownloadStatus::CANCELED:

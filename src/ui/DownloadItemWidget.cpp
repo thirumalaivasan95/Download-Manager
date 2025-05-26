@@ -89,7 +89,7 @@ void DownloadItemWidget::update() {
             statusText = "Completed";
             statusColor = Qt::darkGreen;
             break;
-        case dm::core::DownloadStatus::ERROR:
+        case dm::core::DownloadStatus::DOWNLOAD_ERROR:
             statusText = "Error: " + QString::fromStdString(task_->getError());
             statusColor = Qt::red;
             break;
@@ -299,7 +299,7 @@ void DownloadItemWidget::updateButtonStates() {
     // Enable/disable buttons based on status
     startButton_->setEnabled(status == dm::core::DownloadStatus::NONE || 
                             status == dm::core::DownloadStatus::QUEUED ||
-                            status == dm::core::DownloadStatus::ERROR);
+                            status == dm::core::DownloadStatus::DOWNLOAD_ERROR);
     
     pauseButton_->setEnabled(status == dm::core::DownloadStatus::DOWNLOADING);
     resumeButton_->setEnabled(status == dm::core::DownloadStatus::PAUSED);

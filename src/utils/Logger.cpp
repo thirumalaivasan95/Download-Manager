@@ -92,7 +92,7 @@ void Logger::warning(const std::string& message) {
 }
 
 void Logger::error(const std::string& message) {
-    log(LogLevel::ERROR, message);
+    log(LogLevel::LOG_ERROR, message);
 }
 
 void Logger::critical(const std::string& message) {
@@ -116,7 +116,7 @@ void Logger::log(LogLevel level, const std::string& message) {
         // Write to console if enabled
         if (consoleLoggingEnabled_) {
             // Set output color based on log level
-            if (level == LogLevel::ERROR || level == LogLevel::CRITICAL) {
+            if (level == LogLevel::LOG_ERROR || level == LogLevel::CRITICAL) {
                 std::cerr << formattedMessage << std::endl;
             } else {
                 std::cout << formattedMessage << std::endl;
@@ -183,7 +183,7 @@ std::string Logger::logLevelToString(LogLevel level) {
             return "INFO";
         case LogLevel::WARNING:
             return "WARNING";
-        case LogLevel::ERROR:
+        case LogLevel::LOG_ERROR:
             return "ERROR";
         case LogLevel::CRITICAL:
             return "CRITICAL";

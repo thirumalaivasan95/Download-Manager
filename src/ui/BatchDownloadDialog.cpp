@@ -986,7 +986,7 @@ void BatchDownloadDialog::updateProgressTable() {
             case dm::core::DownloadStatus::COMPLETED:
                 statusText = tr("Completed");
                 break;
-            case dm::core::DownloadStatus::ERROR:
+            case dm::core::DownloadStatus::DOWNLOAD_ERROR:
                 statusText = tr("Error");
                 break;
             case dm::core::DownloadStatus::CANCELED:
@@ -1043,7 +1043,7 @@ void BatchDownloadDialog::updateBatchItem(int index, int status) {
                 case dm::core::DownloadStatus::COMPLETED:
                     statusItem->setText(tr("Completed"));
                     break;
-                case dm::core::DownloadStatus::ERROR:
+                case dm::core::DownloadStatus::DOWNLOAD_ERROR:
                     statusItem->setText(tr("Error"));
                     break;
                 case dm::core::DownloadStatus::CANCELED:

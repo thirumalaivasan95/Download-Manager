@@ -13,7 +13,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(CMAKE_AUTOMOC ON)
 
 # Find required packages
-find_package(Qt5 COMPONENTS Core Gui Widgets Network Concurrent REQUIRED)
+find_package(Qt6 COMPONENTS Core Gui Widgets Network Concurrent REQUIRED)
 find_package(CURL REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
@@ -81,18 +81,18 @@ set(HEADERS
 
 # Resources file
 set(RESOURCES resources/resources.qrc)
-qt5_add_resources(QT_RESOURCES ${RESOURCES})
+qt6_add_resources(QT_RESOURCES ${RESOURCES})
 
 # Set up target
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${QT_RESOURCES})
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME}
-    Qt5::Core
-    Qt5::Gui
-    Qt5::Widgets
-    Qt5::Network
-    Qt5::Concurrent
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Network
+    Qt6::Concurrent
     ${CURL_LIBRARIES}
     ${OPENSSL_LIBRARIES}
     Threads::Threads

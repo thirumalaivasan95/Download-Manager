@@ -20,7 +20,7 @@ enum class DownloadStatus {
     DOWNLOADING,    // Actively downloading
     PAUSED,         // Paused by user
     COMPLETED,      // Successfully completed
-    ERROR,          // Error occurred
+    DOWNLOAD_ERROR, // Error occurred
     CANCELED        // Canceled by user
 };
 

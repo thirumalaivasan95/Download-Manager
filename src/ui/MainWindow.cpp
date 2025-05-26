@@ -683,7 +683,7 @@ void MainWindow::updateDownloadInUi(std::shared_ptr<dm::core::DownloadTask> task
         case dm::core::DownloadStatus::COMPLETED:
             statusText = "Completed";
             break;
-        case dm::core::DownloadStatus::ERROR:
+        case dm::core::DownloadStatus::DOWNLOAD_ERROR:
             statusText = "Error";
             break;
         case dm::core::DownloadStatus::CANCELED:
@@ -745,7 +745,7 @@ void MainWindow::updateDownloadInUi(std::shared_ptr<dm::core::DownloadTask> task
         case dm::core::DownloadStatus::COMPLETED:
             textBrush = QBrush(Qt::darkGreen);
             break;
-        case dm::core::DownloadStatus::ERROR:
+        case dm::core::DownloadStatus::DOWNLOAD_ERROR:
             textBrush = QBrush(Qt::red);
             break;
         case dm::core::DownloadStatus::PAUSED:
@@ -877,7 +877,7 @@ void MainWindow::updateUiState() {
             
             if (status == dm::core::DownloadStatus::NONE ||
                 status == dm::core::DownloadStatus::QUEUED ||
-                status == dm::core::DownloadStatus::ERROR) {
+                status == dm::core::DownloadStatus::DOWNLOAD_ERROR) {
                 canStart = true;
             }
             

@@ -1,13 +1,15 @@
 #ifndef SEGMENT_DOWNLOADER_H
 #define SEGMENT_DOWNLOADER_H
 
+#ifndef Q_MOC_RUN
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <chrono>
+#endif
 #include <string>
 #include <memory>
 #include <functional>
-#include <atomic>
-#include <thread>
-#include <mutex>
-#include <chrono>
 #include "core/HttpClient.h"
 
 namespace dm {
@@ -16,13 +18,13 @@ namespace core {
 /**
  * @brief Segment status enumeration
  */
-enum class SegmentStatus {
+enum SegmentStatus {
     NONE,           // Not started
     DOWNLOADING,    // Actively downloading
     PAUSED,         // Paused
     COMPLETED,      // Successfully completed
-    ERROR           // Error occurred
-};
+    SEGMENT_ERROR   // Error occurred
+}; // <-- Ensure semicolon is present and on the same line
 
 /**
  * @brief Segment completion callback function type

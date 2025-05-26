@@ -87,7 +87,7 @@ bool DownloadTask::initialize() {
         // Initialize the file
         if (!initializeFile()) {
             error_ = "Failed to initialize file";
-            setStatus(DownloadStatus::ERROR);
+            setStatus(DownloadStatus::DOWNLOAD_ERROR);
             return false;
         }
         
@@ -103,7 +103,7 @@ bool DownloadTask::initialize() {
         return true;
     } catch (const std::exception& e) {
         error_ = "Initialization error: " + std::string(e.what());
-        setStatus(DownloadStatus::ERROR);
+        setStatus(DownloadStatus::DOWNLOAD_ERROR);
         return false;
     }
 }
@@ -126,7 +126,7 @@ bool DownloadTask::start() {
         // Create segments
         if (!createSegments()) {
             error_ = "Failed to create download segments";
-            setStatus(DownloadStatus::ERROR);
+            setStatus(DownloadStatus::DOWNLOAD_ERROR);
             return false;
         }
         
@@ -145,7 +145,7 @@ bool DownloadTask::start() {
         return true;
     } catch (const std::exception& e) {
         error_ = "Start error: " + std::string(e.what());
-        setStatus(DownloadStatus::ERROR);
+        setStatus(DownloadStatus::DOWNLOAD_ERROR);
         return false;
     }
 }
@@ -588,7 +588,7 @@ void DownloadTask::onSegmentError(std::shared_ptr<SegmentDownloader> segment, co
     error_ = "Segment " + std::to_string(segment->getId()) + " error: " + error;
     
     // Set status to error
-    setStatus(DownloadStatus::ERROR);
+    setStatus(DownloadStatus::DOWNLOAD_ERROR);
 }
 
 } // namespace core

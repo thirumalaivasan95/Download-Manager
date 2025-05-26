@@ -234,7 +234,7 @@ void SegmentDownloader::downloadThread() {
                 dm::utils::Logger::debug(log.str());
                 break;
             } else {
-                setStatus(SegmentStatus::ERROR);
+                setStatus(SegmentStatus::SEGMENT_ERROR);
                 lastError = "Download failed";
                 std::ostringstream log;
                 log << "Failed to download segment " << id_ << " for " << url_ << " (attempt " << attempt << ")";
@@ -244,7 +244,7 @@ void SegmentDownloader::downloadThread() {
                 }
             }
         } catch (const std::exception& e) {
-            setStatus(SegmentStatus::ERROR);
+            setStatus(SegmentStatus::SEGMENT_ERROR);
             lastError = e.what();
             std::ostringstream log;
             log << "Exception in segment " << id_ << " for " << url_ << " (attempt " << attempt << "): " << e.what();
@@ -261,7 +261,7 @@ void SegmentDownloader::downloadThread() {
         }
     }
     if (!success && !stopRequested_) {
-        setStatus(SegmentStatus::ERROR);
+        setStatus(SegmentStatus::SEGMENT_ERROR);
         if (errorCallback_) {
             errorCallback_(shared_from_this(), lastError.empty() ? "Download failed after retries" : lastError);
         }

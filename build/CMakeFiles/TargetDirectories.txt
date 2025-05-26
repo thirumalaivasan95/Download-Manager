@@ -1,7 +1,0 @@
-/workspaces/Download-Manager/build/CMakeFiles/install/strip.dir
-/workspaces/Download-Manager/build/CMakeFiles/install/local.dir
-/workspaces/Download-Manager/build/CMakeFiles/install.dir
-/workspaces/Download-Manager/build/CMakeFiles/list_install_components.dir
-/workspaces/Download-Manager/build/CMakeFiles/rebuild_cache.dir
-/workspaces/Download-Manager/build/CMakeFiles/edit_cache.dir
-/workspaces/Download-Manager/build/CMakeFiles/DownloadManager.dir

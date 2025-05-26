@@ -90,7 +90,7 @@ void SettingsDialog::applySettings() {
             logLevel = dm::utils::LogLevel::WARNING;
             break;
         case 3:
-            logLevel = dm::utils::LogLevel::ERROR;
+            logLevel = dm::utils::LogLevel::LOG_ERROR;
             break;
         case 4:
             logLevel = dm::utils::LogLevel::CRITICAL;

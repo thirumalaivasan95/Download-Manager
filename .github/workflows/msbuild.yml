@@ -33,26 +33,25 @@ jobs:
         if: runner.os == 'macOS'
         run: echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5)/lib/cmake" >> $GITHUB_ENV
 
-      - name: Check and Install Qt
-        if: runner.os != 'macOS'
+      - name: Install aqtinstall
+        run: pip install --upgrade aqtinstall
+
+      - name: Check Available Qt Versions
         shell: bash
         run: |
-          pip install --upgrade aqtinstall
           available_versions=$(python -m aqt list-qt windows desktop || echo "")
-          echo "Available versions output: $available_versions"
           if [ -z "$available_versions" ]; then
             echo "Error: Could not retrieve available Qt versions. Please check the aqtinstall setup."
             echo "QT_VERSION=6.9.1" >> $GITHUB_ENV
           else
-            latest_version=$(echo "$available_versions" | tr ' ' '\n' | sort -V | tail -n 1)
-            echo "Fallback to latest version: $latest_version"
-            echo "QT_VERSION=$latest_version" >> $GITHUB_ENV
+            echo "Available versions output: $available_versions"
           fi
 
-          # Verify module availability and continue with fallback if needed
-          if ! python -m aqt list-qt windows desktop --modules "${{ env.QT_VERSION }}" win64_msvc2019_64 | grep -q 'qtbase'; then
-            echo "Error: Required module 'qtbase' not available for Qt version ${{ env.QT_VERSION }}."
-            echo "Attempting fallback to a compatible version..."
+      - name: Verify and Install Qt
+        shell: bash
+        run: |
+          if ! python -m aqt list-qt windows desktop --modules "6.9.1" win64_msvc2019_64 | grep -q 'qtbase'; then
+            echo "Error: Required module 'qtbase' not available for Qt version 6.9.1."
             compatible_version=$(python -m aqt list-qt windows desktop | tr ' ' '\n' | grep -E '^6\.' | sort -V | grep -v 'beta\|alpha' | tail -n 1)
             if [ -z "$compatible_version" ]; then
               echo "Error: No compatible Qt version found with the 'qtbase' module."
@@ -60,8 +59,6 @@ jobs:
             fi
             echo "Using compatible version: $compatible_version"
             echo "QT_VERSION=$compatible_version" >> $GITHUB_ENV
-          else
-            echo "Qt version ${{ env.QT_VERSION }} with 'qtbase' module is available."
           fi
 
       - name: Install Qt5

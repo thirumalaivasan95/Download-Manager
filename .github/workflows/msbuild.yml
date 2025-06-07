@@ -25,6 +25,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Removed all manual Qt installs and aqtinstall logic
+      # Unified Qt installation for all platforms
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
@@ -42,39 +44,72 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjsoncpp-dev
+          if [ $? -ne 0 ]; then
+            echo "Failed to install dependencies. Check package availability."
+            exit 1
+          fi
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install curl openssl jsoncpp
+          brew install curl openssl jsoncpp || { echo "Failed to install dependencies via brew."; exit 1; }
 
-      - name: Verify Qt Installation
-        shell: bash
+      - name: Debug CMake Configuration
         run: |
-          echo "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}"
-          echo "Qt5_DIR: ${Qt5_DIR}"
-          echo "QTDIR: ${QTDIR}"
-          
-          # Verify Qt5Config.cmake exists
-          if [ -n "${CMAKE_PREFIX_PATH}" ]; then
-            echo "Searching for Qt5Config.cmake in CMAKE_PREFIX_PATH..."
-            find "${CMAKE_PREFIX_PATH}" -name "Qt5Config.cmake" -type f 2>/dev/null | head -3 || echo "Qt5Config.cmake not found in CMAKE_PREFIX_PATH"
+          echo "CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}"
+          echo "CMAKE_PREFIX_PATH (env): ${{ env.CMAKE_PREFIX_PATH }}"
+          echo "Qt5_DIR=${Qt5_DIR}"
+          echo "Checking for Qt5Config.cmake in ${{ env.CMAKE_PREFIX_PATH }}..."
+          find "${{ env.CMAKE_PREFIX_PATH }}" -name Qt5Config.cmake || echo "Qt5Config.cmake not found."
+
+      - name: Validate CMake Paths
+        run: |
+          echo "CMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH }}"
+          echo "Qt5_DIR=${{ env.Qt5_DIR }}"
+          if [ -z "${{ env.CMAKE_PREFIX_PATH }}" ] || [ ! -d "${{ env.CMAKE_PREFIX_PATH }}" ]; then
+            echo "Error: CMAKE_PREFIX_PATH is invalid or not set correctly."
+            if [ "${{ runner.os }}" = "macOS" ]; then
+              echo "Contents of $(brew --prefix qt@5):"
+              ls -l $(brew --prefix qt@5) || echo "Directory not found"
+              echo "Contents of ${{ env.CMAKE_PREFIX_PATH }}:"
+              ls -l ${{ env.CMAKE_PREFIX_PATH }} || echo "Directory not found"
+            else
+              echo "Contents of ${{ env.CMAKE_PREFIX_PATH }}:"
+              ls -l ${{ env.CMAKE_PREFIX_PATH }} || echo "Directory not found"
+            fi
+            exit 1
+          fi
+          # Check for Qt5Config.cmake
+          if ! find "${{ env.CMAKE_PREFIX_PATH }}" -name Qt5Config.cmake | grep -q Qt5Config.cmake; then
+            echo "Error: Qt5Config.cmake not found in CMAKE_PREFIX_PATH."
+            find "${{ env.CMAKE_PREFIX_PATH }}" -name Qt5*cmake || true
+            exit 1
           fi
 
       - name: Configure CMake
-        shell: bash
         run: |
-          echo "Configuring CMake with BUILD_TYPE=${{ env.BUILD_TYPE }}"
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_PREFIX_PATH="${{ env.CMAKE_PREFIX_PATH || env.Qt5_DIR }}"
+          cmake_exit_code=$?
+          if [ $cmake_exit_code -ne 0 ]; then
+            echo "CMake configuration failed. Printing CMakeError.log:"
+            cat build/CMakeFiles/CMakeError.log || echo "No CMakeError.log found."
+            exit $cmake_exit_code
+          fi
 
       - name: Build
-        shell: bash
         run: |
-          echo "Building project..."
           cmake --build build --config ${{ env.BUILD_TYPE }} --verbose
+          build_exit_code=$?
+          if [ $build_exit_code -ne 0 ]; then
+            echo "Build failed. Printing CMakeError.log:"
+            cat build/CMakeFiles/CMakeError.log || echo "No CMakeError.log found."
+            exit $build_exit_code
+          fi
 
       - name: Debug Build Directory
-        run: ls -la build/
+        run: ls -l build
 
       - name: Run tests with verbose output
         run: ctest --test-dir build --output-on-failure --verbose -C ${{ env.BUILD_TYPE }}

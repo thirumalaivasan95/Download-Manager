@@ -58,7 +58,7 @@ jobs:
             echo "Available versions output: $available_versions"
           fi
 
-      - name: Determine Compatible Qt Version, Architecture, and Modules
+      - name: Determine Compatible Qt Version and Architecture
         shell: bash
         run: |
           # List available Qt 5.x versions
@@ -69,7 +69,7 @@ jobs:
           fi
 
           # Find the latest stable 5.15.x version
-          compatible_version=$(echo "$available_versions" | tr ' ' '\n' | grep -E '^5\.15\.' | sort -V | grep -v 'beta\|alpha' | tail -n 1)
+          compatible_version=$(echo "$available_versions" | tr ' ' '\n' | grep -E '^5\\.15\\.' | sort -V | grep -v 'beta\|alpha' | tail -n 1)
           if [ -z "$compatible_version" ]; then
             echo "Error: No compatible Qt 5.15.x version found."
             exit 1
@@ -82,21 +82,10 @@ jobs:
             exit 1
           fi
 
-          # Try each available architecture until qtbase is found
-          found_arch=""
-          for arch in $available_archs; do
-            modules=$(python -m aqt list-qt windows desktop --modules "$compatible_version" "$arch" | grep qtbase || true)
-            if [ -n "$modules" ]; then
-              found_arch="$arch"
-              break
-            fi
-          done
-
+          # Select the first available win64 architecture
+          found_arch=$(echo "$available_archs" | head -n 1)
           if [ -z "$found_arch" ]; then
-            echo "Error: 'qtbase' module not available for Qt version $compatible_version and any win64 arch."
-            for arch in $available_archs; do
-              python -m aqt list-qt windows desktop --modules "$compatible_version" "$arch"
-            done
+            echo "Error: No win64 architecture found."
             exit 1
           fi
 

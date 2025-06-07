@@ -70,14 +70,25 @@ jobs:
           echo "CMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH }}"
           echo "Qt5_DIR=${{ env.Qt5_DIR }}"
 
+      - name: Validate CMake Paths
+        run: |
+          echo "CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}"
+          echo "Qt5_DIR=${Qt5_DIR}"
+          if [ -z "${CMAKE_PREFIX_PATH}" ] || [ ! -d "${CMAKE_PREFIX_PATH}" ]; then
+            echo "Error: CMAKE_PREFIX_PATH is invalid or not set correctly."
+            exit 1
+          fi
+
       - name: Configure CMake
         run: >
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DCMAKE_PREFIX_PATH="${{ env.CMAKE_PREFIX_PATH || env.Qt5_DIR }}"
+        continue-on-error: false
 
       - name: Build
         run: cmake --build build --config ${{ env.BUILD_TYPE }}
+        continue-on-error: false
 
       - name: Debug Build Directory
         run: ls -l build

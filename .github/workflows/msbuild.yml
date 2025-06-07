@@ -47,26 +47,26 @@ jobs:
             echo "Available versions output: $available_versions"
           fi
 
-      - name: Verify and Install Qt
+      - name: Set Qt version and check compatibility
         shell: bash
         run: |
-          if ! python -m aqt list-qt windows desktop --modules "6.9.1" win64_msvc2019_64 | grep -q 'qtbase'; then
-            echo "Error: Required module 'qtbase' not available for Qt version 6.9.1."
-            compatible_version=$(python -m aqt list-qt windows desktop | tr ' ' '\n' | grep -E '^6\.' | sort -V | grep -v 'beta\|alpha' | tail -n 1)
-            if [ -z "$compatible_version" ]; then
-              echo "Error: No compatible Qt version found with the 'qtbase' module."
-              exit 1
-            fi
-            echo "Using compatible version: $compatible_version"
-            echo "QT_VERSION=$compatible_version" >> $GITHUB_ENV
+          available_versions=$(python -m aqt list-qt windows desktop || echo "")
+          if [ -z "$available_versions" ]; then
+            echo "Error: Could not retrieve available Qt versions. Please check the aqtinstall setup."
+            exit 1
           fi
+          # Find a compatible Qt version with the 'qtbase' module
+          compatible_version=$(python -m aqt list-qt windows desktop | tr ' ' '\n' | grep -E '^6\.' | sort -V | grep -v 'beta\|alpha' | tail -n 1)
+          if [ -z "$compatible_version" ]; then
+            echo "Error: No compatible Qt version found with the 'qtbase' module."
+            exit 1
+          fi
+          echo "QT_VERSION=${compatible_version}" >> $GITHUB_ENV
 
-      - name: Install Qt5
-        if: runner.os != 'macOS'
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: ${{ env.QT_VERSION }}
-          modules: 'qtbase'
+      - name: Install Qt
+        shell: bash
+        run: |
+          python -m aqt install-qt windows desktop $QT_VERSION win64_msvc2019_64 --outputdir ${{ github.workspace }}/Qt --modules qtbase
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3

@@ -52,15 +52,20 @@ jobs:
               echo "QT_VERSION=$latest_version" >> $GITHUB_ENV
             fi
           fi
-          # Check module availability
-          python -m aqt list-qt windows desktop --modules "${{ env.QT_VERSION }}" win64_msvc2019_64 | grep -q 'qtbase'
-          if [ $? -ne 0 ]; then
-            echo "Error: Required module 'qtbase' not available for Qt version ${{ env.QT_VERSION }}"
-            exit 1
+          # Check module availability and fallback if needed
+          if ! python -m aqt list-qt windows desktop --modules "${{ env.QT_VERSION }}" win64_msvc2019_64 | grep -q 'qtbase'; then
+            echo "Error: Required module 'qtbase' not available for Qt version ${{ env.QT_VERSION }}."
+            echo "Attempting to fallback to latest available version with required modules..."
+            latest_version=$(python -m aqt list-qt windows desktop | tr ' ' '\n' | grep -E '^6\.' | sort -V | tail -n 1)
+            echo "QT_VERSION=$latest_version" >> $GITHUB_ENV
+            if ! python -m aqt list-qt windows desktop --modules "$latest_version" win64_msvc2019_64 | grep -q 'qtbase'; then
+              echo "Error: 'qtbase' module is not available even for the latest version ($latest_version)."
+              exit 1
+            fi
+            echo "Fallback successful: Using Qt version $latest_version."
+          else
+            echo "Qt version ${{ env.QT_VERSION }} with 'qtbase' module is available."
           fi
-          # List available architectures and modules for the selected version
-          python -m aqt list-qt windows desktop --arch "${{ env.QT_VERSION }}" || true
-          python -m aqt list-qt windows desktop --modules "${{ env.QT_VERSION }}" win64_msvc2019_64 || true
 
       - name: Install Qt5
         if: runner.os != 'macOS'

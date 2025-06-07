@@ -37,17 +37,17 @@ jobs:
         if: runner.os != 'macOS'
         run: |
           pip install aqtinstall
-          available_versions=$(python -m aqt list-qt windows desktop | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+$')
-          echo "Available Qt Versions: $available_versions"
-          if echo "$available_versions" | grep -q "${{ env.QT_VERSION }}"; then
+          available_versions=$(python -m aqt list-qt windows desktop || echo "")
+          if [ -z "$available_versions" ]; then
+            echo "Error: Could not retrieve available Qt versions. Please check the aqtinstall setup."
+            echo "QT_VERSION=5.15.2" >> $GITHUB_ENV
+            echo "Falling back to hardcoded fallback version 5.15.2."
+          elif echo "$available_versions" | grep -q "${{ env.QT_VERSION }}"; then
             echo "Qt version ${{ env.QT_VERSION }} is available."
-          elif [ -n "$available_versions" ]; then
+          else
             latest_version=$(echo "$available_versions" | tail -n 1)
             echo "Qt version ${{ env.QT_VERSION }} is not available. Falling back to latest version: $latest_version."
             echo "QT_VERSION=$latest_version" >> $GITHUB_ENV
-          else
-            echo "No valid Qt versions found. Exiting."
-            exit 1
           fi
 
       - name: Install Qt5

@@ -38,6 +38,7 @@ jobs:
         run: |
           pip install aqtinstall
           available_versions=$(python -m aqt list-qt windows desktop | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+$')
+          echo "Available Qt Versions: $available_versions"
           if echo "$available_versions" | grep -q "${{ env.QT_VERSION }}"; then
             echo "Qt version ${{ env.QT_VERSION }} is available."
           else
@@ -64,6 +65,11 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install curl openssl jsoncpp
 
+      - name: Debug CMake Configuration
+        run: |
+          echo "CMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH }}"
+          echo "Qt5_DIR=${{ env.Qt5_DIR }}"
+
       - name: Configure CMake
         run: >
           cmake -S . -B build -G Ninja \
@@ -73,8 +79,11 @@ jobs:
       - name: Build
         run: cmake --build build --config ${{ env.BUILD_TYPE }}
 
-      - name: Run tests
-        run: ctest --test-dir build --output-on-failure -C ${{ env.BUILD_TYPE }}
+      - name: Debug Build Directory
+        run: ls -l build
+
+      - name: Run tests with verbose output
+        run: ctest --test-dir build --output-on-failure --verbose -C ${{ env.BUILD_TYPE }}
         continue-on-error: true
 
       - name: Upload test logs

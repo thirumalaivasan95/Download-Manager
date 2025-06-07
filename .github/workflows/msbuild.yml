@@ -21,91 +21,19 @@ jobs:
         build_type: [Debug, Release]
     env:
       BUILD_TYPE: ${{ matrix.build_type }}
-      QT_VERSION: '6.9.1'
+      QT_VERSION: '5.15.2'
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Qt5 (macOS)
-        if: runner.os == 'macOS'
-        run: brew install qt@5
-
-      - name: Set Qt5 Environment Path (macOS)
-        if: runner.os == 'macOS'
-        run: echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5)/lib/cmake" >> $GITHUB_ENV
-
-      - name: Install aqtinstall
-        run: pip install --upgrade aqtinstall
-
-      - name: Verify aqtinstall installation
-        run: python -m aqt help
-
-      - name: Debug aqtinstall setup
-        shell: bash
-        run: |
-          python -m aqt list-qt windows desktop || echo "Failed to list Qt versions"
-          if [ -n "$QT_VERSION" ]; then
-            python -m aqt list-qt windows desktop --arch win64_msvc2019_64 --modules $QT_VERSION || echo "Failed to list modules"
-          fi
-
-      - name: Check Available Qt Versions
-        shell: bash
-        run: |
-          available_versions=$(python -m aqt list-qt windows desktop || echo "")
-          if [ -z "$available_versions" ]; then
-            echo "Error: Could not retrieve available Qt versions. Please check the aqtinstall setup."
-            echo "QT_VERSION=6.9.1" >> $GITHUB_ENV
-          else
-            echo "Available versions output: $available_versions"
-          fi
-
-      - name: Determine Compatible Qt Version and Architecture
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          set -x
-          # List available Qt 5.x versions
-          available_versions=$(python -m aqt list-qt windows desktop || echo "")
-          echo "available_versions: $available_versions"
-          if [ -z "$available_versions" ]; then
-            echo "Error: Could not retrieve available Qt versions."
-            exit 1
-          fi
-
-          # Find the latest stable 5.15.x version
-          compatible_version=$(echo "$available_versions" | tr ' ' '\n' | grep -E '^5\\.15\\.' | sort -V | grep -v 'beta\|alpha' | tail -n 1)
-          echo "compatible_version: $compatible_version"
-          if [ -z "$compatible_version" ]; then
-            echo "Error: No compatible Qt 5.15.x version found."
-            exit 1
-          fi
-
-          # List available architectures for this version (one per line)
-          available_archs=$(python -m aqt list-qt windows desktop --arch "$compatible_version" | grep win64 | tr ' ' '\n' | grep -v '^$' || true)
-          echo "available_archs: $available_archs"
-          if [ -z "$available_archs" ]; then
-            echo "Error: No architectures found for Qt version $compatible_version."
-            exit 1
-          fi
-
-          # Select the first available win64 architecture
-          found_arch=$(echo "$available_archs" | head -n 1)
-          echo "found_arch: $found_arch"
-          if [ -z "$found_arch" ]; then
-            echo "Error: No win64 architecture found."
-            exit 1
-          fi
-
-          # Export the compatible version and arch
-          echo "QT_VERSION=${compatible_version}" >> $GITHUB_ENV
-          echo "QT_ARCH=${found_arch}" >> $GITHUB_ENV
-          echo "Selected Qt version: $compatible_version"
-          echo "Selected Qt arch: $found_arch"
-
       - name: Install Qt
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          python -m aqt install-qt windows desktop $QT_VERSION $QT_ARCH --outputdir ${{ github.workspace }}/Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: ${{ runner.os == 'Linux' && 'linux' || runner.os == 'Windows' && 'windows' || 'mac' }}
+          target: 'desktop'
+          arch: ${{ runner.os == 'Linux' && 'gcc_64' || runner.os == 'Windows' && 'win64_msvc2019_64' || 'clang_64' }}
+          dir: '${{ github.workspace }}/qt/'
+          modules: 'qtcharts qtwebengine qttools'
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3
@@ -114,83 +42,39 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjsoncpp-dev
-          if [ $? -ne 0 ]; then
-            echo "Failed to install dependencies. Check package availability."
-            exit 1
-          fi
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install curl openssl jsoncpp || { echo "Failed to install dependencies via brew."; exit 1; }
+          brew install curl openssl jsoncpp
 
-      - name: Set Qt5 Environment Path (Linux)
-        if: runner.os == 'Linux'
+      - name: Verify Qt Installation
+        shell: bash
         run: |
-          if [ -d "/usr/lib/x86_64-linux-gnu/cmake/Qt5" ]; then
-            echo "CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/cmake/Qt5" >> $GITHUB_ENV
-          elif [ -d "/usr/lib/cmake/Qt5" ]; then
-            echo "CMAKE_PREFIX_PATH=/usr/lib/cmake/Qt5" >> $GITHUB_ENV
-          else
-            echo "Warning: Qt5 CMake directory not found. You may need to adjust this path for your distribution."
-          fi
-
-      - name: Debug CMake Configuration
-        run: |
-          echo "CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}"
-          echo "CMAKE_PREFIX_PATH (env): ${{ env.CMAKE_PREFIX_PATH }}"
-          echo "Qt5_DIR=${Qt5_DIR}"
-          echo "Checking for Qt5Config.cmake in ${{ env.CMAKE_PREFIX_PATH }}..."
-          find "${{ env.CMAKE_PREFIX_PATH }}" -name Qt5Config.cmake || echo "Qt5Config.cmake not found."
-
-      - name: Validate CMake Paths
-        run: |
-          echo "CMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH }}"
-          echo "Qt5_DIR=${{ env.Qt5_DIR }}"
-          if [ -z "${{ env.CMAKE_PREFIX_PATH }}" ] || [ ! -d "${{ env.CMAKE_PREFIX_PATH }}" ]; then
-            echo "Error: CMAKE_PREFIX_PATH is invalid or not set correctly."
-            if [ "${{ runner.os }}" = "macOS" ]; then
-              echo "Contents of $(brew --prefix qt@5):"
-              ls -l $(brew --prefix qt@5) || echo "Directory not found"
-              echo "Contents of ${{ env.CMAKE_PREFIX_PATH }}:"
-              ls -l ${{ env.CMAKE_PREFIX_PATH }} || echo "Directory not found"
-            else
-              echo "Contents of ${{ env.CMAKE_PREFIX_PATH }}:"
-              ls -l ${{ env.CMAKE_PREFIX_PATH }} || echo "Directory not found"
-            fi
-            exit 1
-          fi
-          # Check for Qt5Config.cmake
-          if ! find "${{ env.CMAKE_PREFIX_PATH }}" -name Qt5Config.cmake | grep -q Qt5Config.cmake; then
-            echo "Error: Qt5Config.cmake not found in CMAKE_PREFIX_PATH."
-            find "${{ env.CMAKE_PREFIX_PATH }}" -name Qt5*cmake || true
-            exit 1
+          echo "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}"
+          echo "Qt5_DIR: ${Qt5_DIR}"
+          echo "QTDIR: ${QTDIR}"
+          
+          # Verify Qt5Config.cmake exists
+          if [ -n "${CMAKE_PREFIX_PATH}" ]; then
+            echo "Searching for Qt5Config.cmake in CMAKE_PREFIX_PATH..."
+            find "${CMAKE_PREFIX_PATH}" -name "Qt5Config.cmake" -type f 2>/dev/null | head -3 || echo "Qt5Config.cmake not found in CMAKE_PREFIX_PATH"
           fi
 
       - name: Configure CMake
+        shell: bash
         run: |
-          cmake -S . -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-            -DCMAKE_PREFIX_PATH="${{ env.CMAKE_PREFIX_PATH || env.Qt5_DIR }}"
-          cmake_exit_code=$?
-          if [ $cmake_exit_code -ne 0 ]; then
-            echo "CMake configuration failed. Printing CMakeError.log:"
-            cat build/CMakeFiles/CMakeError.log || echo "No CMakeError.log found."
-            exit $cmake_exit_code
-          fi
+          echo "Configuring CMake with BUILD_TYPE=${{ env.BUILD_TYPE }}"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
 
       - name: Build
+        shell: bash
         run: |
+          echo "Building project..."
           cmake --build build --config ${{ env.BUILD_TYPE }} --verbose
-          build_exit_code=$?
-          if [ $build_exit_code -ne 0 ]; then
-            echo "Build failed. Printing CMakeError.log:"
-            cat build/CMakeFiles/CMakeError.log || echo "No CMakeError.log found."
-            exit $build_exit_code
-          fi
 
       - name: Debug Build Directory
-        run: ls -l build
+        run: ls -la build/
 
       - name: Run tests with verbose output
         run: ctest --test-dir build --output-on-failure --verbose -C ${{ env.BUILD_TYPE }}

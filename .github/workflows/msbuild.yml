@@ -107,9 +107,10 @@ jobs:
           echo "Selected Qt arch: $found_arch"
 
       - name: Install Qt
+        if: runner.os == 'Windows'
         shell: bash
         run: |
-          python -m aqt install-qt windows desktop $QT_VERSION $QT_ARCH --outputdir ${{ github.workspace }}/Qt --modules qtbase
+          python -m aqt install-qt windows desktop $QT_VERSION $QT_ARCH --outputdir ${{ github.workspace }}/Qt
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3

@@ -36,6 +36,17 @@ jobs:
       - name: Install aqtinstall
         run: pip install --upgrade aqtinstall
 
+      - name: Verify aqtinstall installation
+        run: python -m aqt --version
+
+      - name: Debug aqtinstall setup
+        shell: bash
+        run: |
+          python -m aqt list-qt windows desktop || echo "Failed to list Qt versions"
+          if [ -n "$QT_VERSION" ]; then
+            python -m aqt list-qt windows desktop --arch win64_msvc2019_64 --modules $QT_VERSION || echo "Failed to list modules"
+          fi
+
       - name: Check Available Qt Versions
         shell: bash
         run: |

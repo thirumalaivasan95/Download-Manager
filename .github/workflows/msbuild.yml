@@ -58,7 +58,7 @@ jobs:
             echo "Available versions output: $available_versions"
           fi
 
-      - name: Determine Compatible Qt Version and Modules
+      - name: Determine Compatible Qt Version, Architecture, and Modules
         shell: bash
         run: |
           # List available Qt versions
@@ -68,29 +68,45 @@ jobs:
             exit 1
           fi
 
-          # Find a compatible Qt version with the 'qtbase' module
+          # Find a compatible Qt version (latest stable 6.x)
           compatible_version=$(echo "$available_versions" | tr ' ' '\n' | grep -E '^6\.' | sort -V | grep -v 'beta\|alpha' | tail -n 1)
           if [ -z "$compatible_version" ]; then
-            echo "Error: No compatible Qt version found with the 'qtbase' module."
+            echo "Error: No compatible Qt version found."
             exit 1
           fi
 
-          # Verify if 'qtbase' module is available for the selected version
-          modules=$(python -m aqt list-qt windows desktop --modules "$compatible_version" win64_msvc2019_64 | grep qtbase || true)
+          # List available architectures for this version
+          available_archs=$(python -m aqt list-qt windows desktop --arch "$compatible_version" | grep win64 || true)
+          if [ -z "$available_archs" ]; then
+            echo "Error: No architectures found for Qt version $compatible_version."
+            exit 1
+          fi
+
+          # Prefer win64_msvc2019_64, else pick the first available
+          arch="win64_msvc2019_64"
+          if ! echo "$available_archs" | grep -q "$arch"; then
+            arch=$(echo "$available_archs" | head -n 1)
+            echo "Falling back to available architecture: $arch"
+          fi
+
+          # Check for qtbase module for this version/arch
+          modules=$(python -m aqt list-qt windows desktop --modules "$compatible_version" "$arch" | grep qtbase || true)
           if [ -z "$modules" ]; then
-            echo "Error: 'qtbase' module not available for Qt version $compatible_version."
-            python -m aqt list-qt windows desktop --modules "$compatible_version" win64_msvc2019_64
+            echo "Error: 'qtbase' module not available for Qt version $compatible_version and arch $arch."
+            python -m aqt list-qt windows desktop --modules "$compatible_version" "$arch"
             exit 1
           fi
 
-          # Export the compatible version
+          # Export the compatible version and arch
           echo "QT_VERSION=${compatible_version}" >> $GITHUB_ENV
+          echo "QT_ARCH=${arch}" >> $GITHUB_ENV
           echo "Selected Qt version: $compatible_version"
+          echo "Selected Qt arch: $arch"
 
       - name: Install Qt
         shell: bash
         run: |
-          python -m aqt install-qt windows desktop $QT_VERSION win64_msvc2019_64 --outputdir ${{ github.workspace }}/Qt --modules qtbase
+          python -m aqt install-qt windows desktop $QT_VERSION $QT_ARCH --outputdir ${{ github.workspace }}/Qt --modules qtbase
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3

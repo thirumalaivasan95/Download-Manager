@@ -59,6 +59,7 @@ jobs:
           fi
 
       - name: Determine Compatible Qt Version and Architecture
+        if: runner.os == 'Windows'
         shell: bash
         run: |
           # List available Qt 5.x versions

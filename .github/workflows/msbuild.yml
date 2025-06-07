@@ -139,25 +139,25 @@ jobs:
 
       - name: Validate CMake Paths
         run: |
-          echo "CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}"
-          echo "Qt5_DIR=${Qt5_DIR}"
-          if [ -z "${CMAKE_PREFIX_PATH}" ] || [ ! -d "${CMAKE_PREFIX_PATH}" ]; then
+          echo "CMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH }}"
+          echo "Qt5_DIR=${{ env.Qt5_DIR }}"
+          if [ -z "${{ env.CMAKE_PREFIX_PATH }}" ] || [ ! -d "${{ env.CMAKE_PREFIX_PATH }}" ]; then
             echo "Error: CMAKE_PREFIX_PATH is invalid or not set correctly."
             if [ "${{ runner.os }}" = "macOS" ]; then
               echo "Contents of $(brew --prefix qt@5):"
               ls -l $(brew --prefix qt@5) || echo "Directory not found"
-              echo "Contents of ${CMAKE_PREFIX_PATH}:"
-              ls -l ${CMAKE_PREFIX_PATH} || echo "Directory not found"
+              echo "Contents of ${{ env.CMAKE_PREFIX_PATH }}:"
+              ls -l ${{ env.CMAKE_PREFIX_PATH }} || echo "Directory not found"
             else
-              echo "Contents of ${CMAKE_PREFIX_PATH}:"
-              ls -l ${CMAKE_PREFIX_PATH} || echo "Directory not found"
+              echo "Contents of ${{ env.CMAKE_PREFIX_PATH }}:"
+              ls -l ${{ env.CMAKE_PREFIX_PATH }} || echo "Directory not found"
             fi
             exit 1
           fi
           # Check for Qt5Config.cmake
-          if ! find "${CMAKE_PREFIX_PATH}" -name Qt5Config.cmake | grep -q Qt5Config.cmake; then
+          if ! find "${{ env.CMAKE_PREFIX_PATH }}" -name Qt5Config.cmake | grep -q Qt5Config.cmake; then
             echo "Error: Qt5Config.cmake not found in CMAKE_PREFIX_PATH."
-            find "${CMAKE_PREFIX_PATH}" -name Qt5*cmake || true
+            find "${{ env.CMAKE_PREFIX_PATH }}" -name Qt5*cmake || true
             exit 1
           fi
 

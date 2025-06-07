@@ -77,6 +77,13 @@ jobs:
         run: ctest --test-dir build --output-on-failure -C ${{ env.BUILD_TYPE }}
         continue-on-error: true
 
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ matrix.os }}-${{ matrix.build_type }}
+          path: build/Testing/Temporary/LastTest.log
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:

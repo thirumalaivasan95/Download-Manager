@@ -37,7 +37,7 @@ jobs:
         run: pip install --upgrade aqtinstall
 
       - name: Verify aqtinstall installation
-        run: python -m aqt --version
+        run: python -m aqt help
 
       - name: Debug aqtinstall setup
         shell: bash

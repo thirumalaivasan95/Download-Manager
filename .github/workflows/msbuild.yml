@@ -44,12 +44,14 @@ jobs:
             echo "Error: Could not retrieve available Qt versions. Please check the aqtinstall setup."
             echo "QT_VERSION=5.15.2" >> $GITHUB_ENV
             echo "Falling back to hardcoded fallback version 5.15.2."
-          elif echo "$available_versions" | grep -q "${{ env.QT_VERSION }}"; then
-            echo "Qt version ${{ env.QT_VERSION }} is available."
           else
-            latest_version=$(echo "$available_versions" | tail -n 1)
-            echo "Qt version ${{ env.QT_VERSION }} is not available. Falling back to latest version: $latest_version."
-            echo "QT_VERSION=$latest_version" >> $GITHUB_ENV
+            latest_version=$(echo "$available_versions" | tr ' ' '\n' | sort -V | tail -n 1)
+            if echo "$available_versions" | grep -q "${{ env.QT_VERSION }}"; then
+              echo "Qt version ${{ env.QT_VERSION }} is available."
+            else
+              echo "Qt version ${{ env.QT_VERSION }} is not available. Falling back to latest version: $latest_version."
+              echo "QT_VERSION=$latest_version" >> $GITHUB_ENV
+            fi
           fi
 
       - name: Install Qt5

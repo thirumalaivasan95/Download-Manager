@@ -41,10 +41,13 @@ jobs:
           echo "Available Qt Versions: $available_versions"
           if echo "$available_versions" | grep -q "${{ env.QT_VERSION }}"; then
             echo "Qt version ${{ env.QT_VERSION }} is available."
-          else
-            echo "Qt version ${{ env.QT_VERSION }} is not available. Falling back to latest version."
+          elif [ -n "$available_versions" ]; then
             latest_version=$(echo "$available_versions" | tail -n 1)
+            echo "Qt version ${{ env.QT_VERSION }} is not available. Falling back to latest version: $latest_version."
             echo "QT_VERSION=$latest_version" >> $GITHUB_ENV
+          else
+            echo "No valid Qt versions found. Exiting."
+            exit 1
           fi
 
       - name: Install Qt5
@@ -59,16 +62,24 @@ jobs:
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjsoncpp-dev
+        run: |
+          sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjsoncpp-dev
+          if [ $? -ne 0 ]; then
+            echo "Failed to install dependencies. Check package availability."
+            exit 1
+          fi
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install curl openssl jsoncpp
+        run: |
+          brew install curl openssl jsoncpp || { echo "Failed to install dependencies via brew."; exit 1; }
 
       - name: Debug CMake Configuration
         run: |
           echo "CMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH }}"
           echo "Qt5_DIR=${{ env.Qt5_DIR }}"
+          echo "Checking for Qt5Config.cmake in ${{ env.CMAKE_PREFIX_PATH }}..."
+          find "${{ env.CMAKE_PREFIX_PATH }}" -name Qt5Config.cmake || echo "Qt5Config.cmake not found."
 
       - name: Validate CMake Paths
         run: |

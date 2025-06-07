@@ -21,6 +21,7 @@ jobs:
         build_type: [Debug, Release]
     env:
       BUILD_TYPE: ${{ matrix.build_type }}
+      QT_VERSION: '5.15.10'
     steps:
       - uses: actions/checkout@v4
 
@@ -36,7 +37,7 @@ jobs:
         if: runner.os != 'macOS'
         uses: jurplel/install-qt-action@v3
         with:
-          version: '5.15.12'
+          version: ${{ env.QT_VERSION }}
           modules: 'qtbase'
 
       - name: Install Ninja

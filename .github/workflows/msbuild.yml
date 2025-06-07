@@ -21,7 +21,7 @@ jobs:
         build_type: [Debug, Release]
     env:
       BUILD_TYPE: ${{ matrix.build_type }}
-      QT_VERSION: '5.15.10'
+      QT_VERSION: '6.9.1'
     steps:
       - uses: actions/checkout@v4
 
@@ -37,12 +37,12 @@ jobs:
         if: runner.os != 'macOS'
         shell: bash
         run: |
-          pip install aqtinstall
+          pip install --upgrade aqtinstall
           available_versions=$(python -m aqt list-qt windows desktop || echo "")
           echo "Available versions output: $available_versions"
           if [ -z "$available_versions" ]; then
             echo "Error: Could not retrieve available Qt versions. Please check the aqtinstall setup."
-            echo "QT_VERSION=5.15.2" >> $GITHUB_ENV
+            echo "QT_VERSION=6.9.1" >> $GITHUB_ENV
           else
             latest_version=$(echo "$available_versions" | tr ' ' '\n' | sort -V | tail -n 1)
             if echo "$available_versions" | grep -q "${{ env.QT_VERSION }}"; then
@@ -51,6 +51,12 @@ jobs:
               echo "Qt version ${{ env.QT_VERSION }} is not available. Falling back to latest version: $latest_version."
               echo "QT_VERSION=$latest_version" >> $GITHUB_ENV
             fi
+          fi
+          # Check module availability
+          python -m aqt list-qt windows desktop --modules "${{ env.QT_VERSION }}" win64_msvc2019_64 | grep -q 'qtbase'
+          if [ $? -ne 0 ]; then
+            echo "Error: Required module 'qtbase' not available for Qt version ${{ env.QT_VERSION }}"
+            exit 1
           fi
           # List available architectures and modules for the selected version
           python -m aqt list-qt windows desktop --arch "${{ env.QT_VERSION }}" || true

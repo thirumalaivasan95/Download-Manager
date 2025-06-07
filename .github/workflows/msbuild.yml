@@ -61,17 +61,17 @@ jobs:
       - name: Determine Compatible Qt Version, Architecture, and Modules
         shell: bash
         run: |
-          # List available Qt versions
+          # List available Qt 5.x versions
           available_versions=$(python -m aqt list-qt windows desktop || echo "")
           if [ -z "$available_versions" ]; then
             echo "Error: Could not retrieve available Qt versions."
             exit 1
           fi
 
-          # Find a compatible Qt version (latest stable 6.x)
-          compatible_version=$(echo "$available_versions" | tr ' ' '\n' | grep -E '^6\.' | sort -V | grep -v 'beta\|alpha' | tail -n 1)
+          # Find the latest stable 5.15.x version
+          compatible_version=$(echo "$available_versions" | tr ' ' '\n' | grep -E '^5\.15\.' | sort -V | grep -v 'beta\|alpha' | tail -n 1)
           if [ -z "$compatible_version" ]; then
-            echo "Error: No compatible Qt version found."
+            echo "Error: No compatible Qt 5.15.x version found."
             exit 1
           fi
 

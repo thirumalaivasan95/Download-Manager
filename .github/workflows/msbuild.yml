@@ -3,7 +3,7 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: CMake Build (Windows)
+name: CI Feature Matrix
 
 on:
   push:
@@ -12,28 +12,71 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-    runs-on: windows-latest
+  build-matrix:
+    name: Build and Test (${{ matrix.os }} ${{ matrix.build_type }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        build_type: [Debug, Release]
+    env:
+      BUILD_TYPE: ${{ matrix.build_type }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Qt5
         uses: jurplel/install-qt-action@v3
         with:
-          version: '5.15.2'
-          modules: 'qtbase qttools'
+          version: '5.15.12'
+          modules: 'qtbase'
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3
 
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjsoncpp-dev
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install curl openssl jsoncpp
+
       - name: Configure CMake
         run: >
-          cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="${{ env.Qt5_DIR }}"
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_PREFIX_PATH="${{ env.Qt5_DIR }}"
 
       - name: Build
-        run: cmake --build build --config Release
+        run: cmake --build build --config ${{ env.BUILD_TYPE }}
 
-      - name: Test (if tests exist)
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure -C ${{ env.BUILD_TYPE }}
+        continue-on-error: true
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.os }}-${{ matrix.build_type }}
+          path: build/
+
+  format-check:
+    name: Check Code Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+      - name: Run clang-format
         run: |
-          if (Test-Path build/Debug/ctest.exe) { ctest --test-dir build --output-on-failure }
-        shell: pwsh
+          find . -regex '.*\.[ch]pp' -exec clang-format --dry-run --Werror {} +
+
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cppcheck
+        run: sudo apt-get update && sudo apt-get install -y cppcheck
+      - name: Run cppcheck
+        run: cppcheck --enable=all --inconclusive --error-exitcode=1 --std=c++17 --suppress=missingIncludeSystem .

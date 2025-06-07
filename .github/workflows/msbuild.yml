@@ -62,8 +62,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
+          set -x
           # List available Qt 5.x versions
           available_versions=$(python -m aqt list-qt windows desktop || echo "")
+          echo "available_versions: $available_versions"
           if [ -z "$available_versions" ]; then
             echo "Error: Could not retrieve available Qt versions."
             exit 1
@@ -71,6 +73,7 @@ jobs:
 
           # Find the latest stable 5.15.x version
           compatible_version=$(echo "$available_versions" | tr ' ' '\n' | grep -E '^5\\.15\\.' | sort -V | grep -v 'beta\|alpha' | tail -n 1)
+          echo "compatible_version: $compatible_version"
           if [ -z "$compatible_version" ]; then
             echo "Error: No compatible Qt 5.15.x version found."
             exit 1
@@ -78,6 +81,7 @@ jobs:
 
           # List available architectures for this version (one per line)
           available_archs=$(python -m aqt list-qt windows desktop --arch "$compatible_version" | grep win64 | tr ' ' '\n' | grep -v '^$' || true)
+          echo "available_archs: $available_archs"
           if [ -z "$available_archs" ]; then
             echo "Error: No architectures found for Qt version $compatible_version."
             exit 1
@@ -85,6 +89,7 @@ jobs:
 
           # Select the first available win64 architecture
           found_arch=$(echo "$available_archs" | head -n 1)
+          echo "found_arch: $found_arch"
           if [ -z "$found_arch" ]; then
             echo "Error: No win64 architecture found."
             exit 1

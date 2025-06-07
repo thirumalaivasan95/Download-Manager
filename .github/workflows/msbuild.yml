@@ -33,7 +33,7 @@ jobs:
         if: runner.os == 'macOS'
         run: echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5)/lib/cmake" >> $GITHUB_ENV
 
-      - name: Check Available Qt Versions
+      - name: Check and Install Qt
         if: runner.os != 'macOS'
         shell: bash
         run: |
@@ -43,7 +43,6 @@ jobs:
           if [ -z "$available_versions" ]; then
             echo "Error: Could not retrieve available Qt versions. Please check the aqtinstall setup."
             echo "QT_VERSION=5.15.2" >> $GITHUB_ENV
-            echo "Falling back to hardcoded fallback version 5.15.2."
           else
             latest_version=$(echo "$available_versions" | tr ' ' '\n' | sort -V | tail -n 1)
             if echo "$available_versions" | grep -q "${{ env.QT_VERSION }}"; then
@@ -53,6 +52,9 @@ jobs:
               echo "QT_VERSION=$latest_version" >> $GITHUB_ENV
             fi
           fi
+          # List available architectures and modules for the selected version
+          python -m aqt list-qt windows desktop --arch "${{ env.QT_VERSION }}" || true
+          python -m aqt list-qt windows desktop --modules "${{ env.QT_VERSION }}" win64_msvc2019_64 || true
 
       - name: Install Qt5
         if: runner.os != 'macOS'

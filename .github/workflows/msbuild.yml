@@ -119,6 +119,17 @@ jobs:
         run: |
           brew install curl openssl jsoncpp || { echo "Failed to install dependencies via brew."; exit 1; }
 
+      - name: Set Qt5 Environment Path (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          if [ -d "/usr/lib/cmake/Qt5" ]; then
+            echo "CMAKE_PREFIX_PATH=/usr/lib/cmake/Qt5" >> $GITHUB_ENV
+          elif [ -d "/usr/lib/x86_64-linux-gnu/cmake/Qt5" ]; then
+            echo "CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/cmake/Qt5" >> $GITHUB_ENV
+          else
+            echo "Warning: Qt5 CMake directory not found. You may need to adjust this path for your distribution."
+          fi
+
       - name: Debug CMake Configuration
         run: |
           echo "CMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH }}"

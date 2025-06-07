@@ -45,24 +45,21 @@ jobs:
             echo "QT_VERSION=6.9.1" >> $GITHUB_ENV
           else
             latest_version=$(echo "$available_versions" | tr ' ' '\n' | sort -V | tail -n 1)
-            if echo "$available_versions" | grep -q "${{ env.QT_VERSION }}"; then
-              echo "Qt version ${{ env.QT_VERSION }} is available."
-            else
-              echo "Qt version ${{ env.QT_VERSION }} is not available. Falling back to latest version: $latest_version."
-              echo "QT_VERSION=$latest_version" >> $GITHUB_ENV
-            fi
+            echo "Fallback to latest version: $latest_version"
+            echo "QT_VERSION=$latest_version" >> $GITHUB_ENV
           fi
-          # Check module availability and fallback if needed
+
+          # Verify module availability and continue with fallback if needed
           if ! python -m aqt list-qt windows desktop --modules "${{ env.QT_VERSION }}" win64_msvc2019_64 | grep -q 'qtbase'; then
             echo "Error: Required module 'qtbase' not available for Qt version ${{ env.QT_VERSION }}."
-            echo "Attempting to fallback to latest available version with required modules..."
-            latest_version=$(python -m aqt list-qt windows desktop | tr ' ' '\n' | grep -E '^6\.' | sort -V | tail -n 1)
-            echo "QT_VERSION=$latest_version" >> $GITHUB_ENV
-            if ! python -m aqt list-qt windows desktop --modules "$latest_version" win64_msvc2019_64 | grep -q 'qtbase'; then
-              echo "Error: 'qtbase' module is not available even for the latest version ($latest_version)."
+            echo "Attempting fallback to a compatible version..."
+            compatible_version=$(python -m aqt list-qt windows desktop | tr ' ' '\n' | grep -E '^6\.' | sort -V | grep -v 'beta\|alpha' | tail -n 1)
+            if [ -z "$compatible_version" ]; then
+              echo "Error: No compatible Qt version found with the 'qtbase' module."
               exit 1
             fi
-            echo "Fallback successful: Using Qt version $latest_version."
+            echo "Using compatible version: $compatible_version"
+            echo "QT_VERSION=$compatible_version" >> $GITHUB_ENV
           else
             echo "Qt version ${{ env.QT_VERSION }} with 'qtbase' module is available."
           fi

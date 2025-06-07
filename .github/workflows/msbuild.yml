@@ -24,6 +24,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Qt5 (macOS)
+        if: runner.os == 'macOS'
+        run: brew install qt@5
+
+      - name: Set Qt5 Environment Path (macOS)
+        if: runner.os == 'macOS'
+        run: echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5)/lib/cmake" >> $GITHUB_ENV
+
       - name: Install Qt5
         if: runner.os != 'macOS'
         uses: jurplel/install-qt-action@v3
@@ -46,7 +54,7 @@ jobs:
         run: >
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-            -DCMAKE_PREFIX_PATH="${{ env.Qt5_DIR }}"
+            -DCMAKE_PREFIX_PATH="${{ env.CMAKE_PREFIX_PATH || env.Qt5_DIR }}"
 
       - name: Build
         run: cmake --build build --config ${{ env.BUILD_TYPE }}

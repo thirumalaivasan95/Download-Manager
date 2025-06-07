@@ -76,15 +76,29 @@ jobs:
           echo "Qt5_DIR=${Qt5_DIR}"
           if [ -z "${CMAKE_PREFIX_PATH}" ] || [ ! -d "${CMAKE_PREFIX_PATH}" ]; then
             echo "Error: CMAKE_PREFIX_PATH is invalid or not set correctly."
+            if [ "${{ runner.os }}" = "macOS" ]; then
+              echo "Contents of $(brew --prefix qt@5):"
+              ls -l $(brew --prefix qt@5) || echo "Directory not found"
+              echo "Contents of ${CMAKE_PREFIX_PATH}:"
+              ls -l ${CMAKE_PREFIX_PATH} || echo "Directory not found"
+            else
+              echo "Contents of ${CMAKE_PREFIX_PATH}:"
+              ls -l ${CMAKE_PREFIX_PATH} || echo "Directory not found"
+            fi
             exit 1
           fi
 
       - name: Configure CMake
-        run: >
+        run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DCMAKE_PREFIX_PATH="${{ env.CMAKE_PREFIX_PATH || env.Qt5_DIR }}"
-        continue-on-error: false
+          cmake_exit_code=$?
+          if [ $cmake_exit_code -ne 0 ]; then
+            echo "CMake configuration failed. Printing CMakeError.log:"
+            cat build/CMakeFiles/CMakeError.log || echo "No CMakeError.log found."
+            exit $cmake_exit_code
+          fi
 
       - name: Build
         run: cmake --build build --config ${{ env.BUILD_TYPE }}

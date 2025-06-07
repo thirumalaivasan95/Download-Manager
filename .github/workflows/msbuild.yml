@@ -58,33 +58,38 @@ jobs:
             echo "Available versions output: $available_versions"
           fi
 
-      - name: Set Qt version and check compatibility
+      - name: Determine Compatible Qt Version and Modules
         shell: bash
         run: |
+          # List available Qt versions
           available_versions=$(python -m aqt list-qt windows desktop || echo "")
           if [ -z "$available_versions" ]; then
-            echo "Error: Could not retrieve available Qt versions. Please check the aqtinstall setup."
+            echo "Error: Could not retrieve available Qt versions."
             exit 1
           fi
+
           # Find a compatible Qt version with the 'qtbase' module
-          compatible_version=$(python -m aqt list-qt windows desktop | tr ' ' '\n' | grep -E '^6\.' | sort -V | grep -v 'beta\|alpha' | tail -n 1)
+          compatible_version=$(echo "$available_versions" | tr ' ' '\n' | grep -E '^6\.' | sort -V | grep -v 'beta\|alpha' | tail -n 1)
           if [ -z "$compatible_version" ]; then
             echo "Error: No compatible Qt version found with the 'qtbase' module."
             exit 1
           fi
+
+          # Verify if 'qtbase' module is available for the selected version
+          modules=$(python -m aqt list-qt windows desktop --modules "$compatible_version" win64_msvc2019_64 | grep qtbase || true)
+          if [ -z "$modules" ]; then
+            echo "Error: 'qtbase' module not available for Qt version $compatible_version."
+            python -m aqt list-qt windows desktop --modules "$compatible_version" win64_msvc2019_64
+            exit 1
+          fi
+
+          # Export the compatible version
           echo "QT_VERSION=${compatible_version}" >> $GITHUB_ENV
+          echo "Selected Qt version: $compatible_version"
 
       - name: Install Qt
         shell: bash
         run: |
-          # Correctly list available modules
-          modules=$(python -m aqt list-qt windows desktop --modules $QT_VERSION win64_msvc2019_64 | grep qtbase || true)
-          if [ -z "$modules" ]; then
-            echo "Error: 'qtbase' module not available for Qt version $QT_VERSION. Please check available modules."
-            python -m aqt list-qt windows desktop --modules $QT_VERSION win64_msvc2019_64
-            exit 1
-          fi
-          # Install Qt with the correct module
           python -m aqt install-qt windows desktop $QT_VERSION win64_msvc2019_64 --outputdir ${{ github.workspace }}/Qt --modules qtbase
 
       - name: Install Ninja

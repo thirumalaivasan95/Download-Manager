@@ -35,9 +35,11 @@ jobs:
 
       - name: Check Available Qt Versions
         if: runner.os != 'macOS'
+        shell: bash
         run: |
           pip install aqtinstall
           available_versions=$(python -m aqt list-qt windows desktop || echo "")
+          echo "Available versions output: $available_versions"
           if [ -z "$available_versions" ]; then
             echo "Error: Could not retrieve available Qt versions. Please check the aqtinstall setup."
             echo "QT_VERSION=5.15.2" >> $GITHUB_ENV

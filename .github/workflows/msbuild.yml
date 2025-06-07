@@ -130,19 +130,6 @@ jobs:
             echo "Warning: Qt5 CMake directory not found. You may need to adjust this path for your distribution."
           fi
 
-      - name: Export CMAKE_PREFIX_PATH for Linux
-        if: runner.os == 'Linux'
-        run: |
-          if [ -d "/usr/lib/x86_64-linux-gnu/cmake/Qt5" ]; then
-            export CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/cmake/Qt5
-            echo "CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/cmake/Qt5" >> $GITHUB_ENV
-          elif [ -d "/usr/lib/cmake/Qt5" ]; then
-            export CMAKE_PREFIX_PATH=/usr/lib/cmake/Qt5
-            echo "CMAKE_PREFIX_PATH=/usr/lib/cmake/Qt5" >> $GITHUB_ENV
-          else
-            echo "Warning: Qt5 CMake directory not found. You may need to adjust this path for your distribution."
-          fi
-
       - name: Debug CMake Configuration
         run: |
           echo "CMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH }}"

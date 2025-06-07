@@ -75,33 +75,36 @@ jobs:
             exit 1
           fi
 
-          # List available architectures for this version
-          available_archs=$(python -m aqt list-qt windows desktop --arch "$compatible_version" | grep win64 || true)
+          # List available architectures for this version (one per line)
+          available_archs=$(python -m aqt list-qt windows desktop --arch "$compatible_version" | grep win64 | tr ' ' '\n' | grep -v '^$' || true)
           if [ -z "$available_archs" ]; then
             echo "Error: No architectures found for Qt version $compatible_version."
             exit 1
           fi
 
-          # Prefer win64_msvc2019_64, else pick the first available
-          arch="win64_msvc2019_64"
-          if ! echo "$available_archs" | grep -q "$arch"; then
-            arch=$(echo "$available_archs" | head -n 1)
-            echo "Falling back to available architecture: $arch"
-          fi
+          # Try each available architecture until qtbase is found
+          found_arch=""
+          for arch in $available_archs; do
+            modules=$(python -m aqt list-qt windows desktop --modules "$compatible_version" "$arch" | grep qtbase || true)
+            if [ -n "$modules" ]; then
+              found_arch="$arch"
+              break
+            fi
+          done
 
-          # Check for qtbase module for this version/arch
-          modules=$(python -m aqt list-qt windows desktop --modules "$compatible_version" "$arch" | grep qtbase || true)
-          if [ -z "$modules" ]; then
-            echo "Error: 'qtbase' module not available for Qt version $compatible_version and arch $arch."
-            python -m aqt list-qt windows desktop --modules "$compatible_version" "$arch"
+          if [ -z "$found_arch" ]; then
+            echo "Error: 'qtbase' module not available for Qt version $compatible_version and any win64 arch."
+            for arch in $available_archs; do
+              python -m aqt list-qt windows desktop --modules "$compatible_version" "$arch"
+            done
             exit 1
           fi
 
           # Export the compatible version and arch
           echo "QT_VERSION=${compatible_version}" >> $GITHUB_ENV
-          echo "QT_ARCH=${arch}" >> $GITHUB_ENV
+          echo "QT_ARCH=${found_arch}" >> $GITHUB_ENV
           echo "Selected Qt version: $compatible_version"
-          echo "Selected Qt arch: $arch"
+          echo "Selected Qt arch: $found_arch"
 
       - name: Install Qt
         shell: bash

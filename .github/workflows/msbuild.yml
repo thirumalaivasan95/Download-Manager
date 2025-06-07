@@ -66,7 +66,13 @@ jobs:
       - name: Install Qt
         shell: bash
         run: |
-          python -m aqt install-qt windows desktop $QT_VERSION win64_msvc2019_64 --outputdir ${{ github.workspace }}/Qt --modules qtbase
+          modules=$(python -m aqt list-qt windows desktop --arch win64_msvc2019_64 --modules $QT_VERSION | grep qtbase || true)
+          if [ -z "$modules" ]; then
+            echo "Error: 'qtbase' module not available for Qt version $QT_VERSION. Please check available modules."
+            python -m aqt list-qt windows desktop --arch win64_msvc2019_64 --modules $QT_VERSION
+            exit 1
+          fi
+          python -m aqt install-qt windows desktop $QT_VERSION win64_msvc2019_64 --outputdir ${{ github.workspace }}/Qt --modules $modules
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3

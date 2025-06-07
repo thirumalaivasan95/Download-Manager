@@ -87,6 +87,12 @@ jobs:
             fi
             exit 1
           fi
+          # Check for Qt5Config.cmake
+          if ! find "${CMAKE_PREFIX_PATH}" -name Qt5Config.cmake | grep -q Qt5Config.cmake; then
+            echo "Error: Qt5Config.cmake not found in CMAKE_PREFIX_PATH."
+            find "${CMAKE_PREFIX_PATH}" -name Qt5*cmake || true
+            exit 1
+          fi
 
       - name: Configure CMake
         run: |
@@ -101,8 +107,14 @@ jobs:
           fi
 
       - name: Build
-        run: cmake --build build --config ${{ env.BUILD_TYPE }}
-        continue-on-error: false
+        run: |
+          cmake --build build --config ${{ env.BUILD_TYPE }} --verbose
+          build_exit_code=$?
+          if [ $build_exit_code -ne 0 ]; then
+            echo "Build failed. Printing CMakeError.log:"
+            cat build/CMakeFiles/CMakeError.log || echo "No CMakeError.log found."
+            exit $build_exit_code
+          fi
 
       - name: Debug Build Directory
         run: ls -l build

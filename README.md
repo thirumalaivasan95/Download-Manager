@@ -30,11 +30,11 @@ A comprehensive, professional, and extensible download manager for modern platfo
 
 ---
 
-## Installation
+## Installation & Build Instructions
 
 ### Prerequisites
-- C++17 compatible compiler (GCC 7+, Clang 5+, MSVC 2017+)
-- CMake 3.14 or later
+- C++17 compatible compiler
+- CMake 3.14+
 - Qt 5.12+ (Core, Gui, Widgets, Network, Concurrent)
 - libcurl 7.58+
 - OpenSSL 1.1.0+
@@ -43,55 +43,25 @@ A comprehensive, professional, and extensible download manager for modern platfo
 #### Linux (Recommended)
 ```bash
 sudo apt-get install build-essential cmake libcurl4-openssl-dev libssl-dev qtbase5-dev libjsoncpp-dev
-# Clone the repository
 git clone https://github.com/yourusername/download-manager.git
 cd download-manager
 mkdir build && cd build
-cmake ..
+cmake -DCMAKE_BUILD_TYPE=Debug ..
 make -j$(nproc)
-# Optional: sudo make install
 ```
-- The application is fully supported and tested on major Linux distributions.
 - For Arch/Manjaro: use `pacman -S cmake qt5-base curl openssl jsoncpp`.
 - For Fedora: use `dnf install @development-tools cmake qt5-qtbase-devel libcurl-devel openssl-devel jsoncpp-devel`.
 
 #### Windows
-- Install Qt, CMake, and dependencies (see documentation)
+- Install Qt, CMake, and dependencies
 - Use CMake GUI or command line:
 ```bash
 git clone https://github.com/yourusername/download-manager.git
 cd download-manager
 mkdir build && cd build
-cmake .. -DCMAKE_PREFIX_PATH=C:/Qt/5.15.2/msvc2019_64
-cmake --build . --config Release
-# Optional: cmake --install .
+cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=C:/Qt/5.15.2/msvc2019_64 ..
+cmake --build . --config Debug
 ```
-
-### Windows Build Notes (Qt6, MinGW/MSYS2)
-
-To build on Windows with Qt6 and MSYS2/MinGW, use the following CMake command (from your `build` directory):
-
-```powershell
-cmake -G "MinGW Makefiles" `
-  -DCMAKE_PREFIX_PATH="C:/Qt/6.9.0/mingw_64" `
-  -DOPENSSL_ROOT_DIR="C:/msys64/mingw64" `
-  -DOPENSSL_INCLUDE_DIR="C:/msys64/mingw64/include" `
-  -DOPENSSL_CRYPTO_LIBRARY="C:/msys64/mingw64/lib/libcrypto.a" `
-  -DOPENSSL_SSL_LIBRARY="C:/msys64/mingw64/lib/libssl.a" `
-  -DZLIB_LIBRARY="C:/msys64/mingw64/lib/libz.a" `
-  -DZLIB_INCLUDE_DIR="C:/msys64/mingw64/include" `
-  ..
-```
-
-- Make sure all DLLs you copy for deployment are from the same Qt and MinGW version you built with.
-- If you see missing DLL or entry point errors, clean your build directory and re-copy only the correct DLLs from your Qt and MinGW installation.
-- After building, you can use the following command to automatically copy all required Qt DLLs and plugins for deployment:
-
-```powershell
-& "C:\Qt\6.9.0\mingw_64\bin\windeployqt.exe" .\DownloadManager.exe
-```
-
-This will ensure your application runs on other Windows systems without missing DLL errors.
 
 #### macOS
 ```bash
@@ -99,9 +69,8 @@ brew install cmake qt curl openssl jsoncpp
 git clone https://github.com/yourusername/download-manager.git
 cd download-manager
 mkdir build && cd build
-cmake .. -DCMAKE_PREFIX_PATH=$(brew --prefix qt)
+cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=$(brew --prefix qt) ..
 make -j$(sysctl -n hw.ncpu)
-# Optional: sudo make install
 ```
 
 ---
@@ -164,7 +133,51 @@ Implement the `ProtocolHandler` interface in `include/core/ProtocolHandler.h`.
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines, coding standards, and development setup. Linux-specific improvements and testing are especially appreciated.
+We welcome contributions from everyone! Please follow these guidelines:
+
+- **Code of Conduct:** All contributors must adhere to our Code of Conduct. Report unacceptable behavior to the maintainers.
+- **Reporting Bugs:** Search the [issue tracker](https://github.com/yourusername/download-manager/issues) before submitting. Include clear steps to reproduce, expected/actual behavior, environment details (especially OS), and logs/screenshots if possible.
+- **Suggesting Enhancements:** Open a GitHub issue with a clear title and detailed description. Explain the motivation and, if possible, provide mockups or examples.
+- **Pull Requests:**
+  1. Fork the repository
+  2. Create a feature branch (`git checkout -b feature/your-feature`)
+  3. Make your changes following the coding standards
+  4. Add or update tests as needed
+  5. Update documentation if applicable
+  6. Commit with clear messages
+  7. Push to your fork and open a Pull Request against `main`
+- **Coding Standards:**
+  - Google C++ Style Guide (4-space indentation)
+  - Classes: PascalCase; Methods: camelCase; Variables: snake_case (member: snake_case_); Constants: kConstantName or CONSTANT_NAME
+  - One class per file, keep files under 500 lines if possible
+  - Use Doxygen for all public APIs
+  - Keep comments up-to-date and clear
+- **Development Environment:**
+  - See prerequisites and build instructions above
+- **Testing:**
+  - Write unit tests for all new features (see `tests/` directory)
+  - Use Google Test or Catch2
+  - Run tests with `ctest -V` in the build directory
+  - Aim for at least 80% code coverage
+  - Linux users: please test on multiple distributions if possible and report any distro-specific issues.
+- **Commit Messages:**
+  - Use present tense and imperative mood
+  - First line: summary (≤50 chars), then blank line, then details
+  - Reference issues/PRs as needed
+- **Code Review:**
+  - All PRs require review by a maintainer
+  - Automated checks (CI, tests, style) must pass
+  - Address all review comments before merging
+
+For full details, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+## Community & Support
+
+- Join our [Discord](https://discord.gg/example) for discussion
+- Subscribe to the [mailing list](mailto:example@example.com)
+- Follow [@ExampleProject](https://twitter.com/example)
 
 ---
 

@@ -1,0 +1,23 @@
+# .clang-format
+#
+# This file configures the ClangFormat tool to ensure consistent code formatting
+# across the project. It is based on the LLVM style guide, with minor adjustments.
+#
+# To use this file, run `clang-format -i <source-file>` to format a file in place.
+# Many editors also have extensions that can automatically format code on save
+# using this configuration.
+#
+# For a full list of options, see the ClangFormat documentation:
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+
+---
+Language: Cpp
+BasedOnStyle: LLVM
+IndentWidth: 4
+UseTab: Never
+TabWidth: 4
+BreakBeforeBraces: Attach
+AllowShortIfStatementsOnASingleLine: false
+IndentCaseLabels: false
+ColumnLimit: 100
+AccessModifierOffset: -4

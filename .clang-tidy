@@ -1,0 +1,16 @@
+# .clang-tidy
+#
+# This file configures the clang-tidy linter to enforce modern C++ best practices
+# and catch potential bugs. It is based on a set of recommended checks, with some
+# adjustments to avoid being overly pedantic.
+#
+# To use this file, run `clang-tidy <source-file>` with the appropriate compile
+# commands. Many editors also have extensions that can automatically run
+# clang-tidy and display warnings in the editor.
+#
+# For a full list of checks, see the clang-tidy documentation:
+# https://clang.llvm.org/extra/clang-tidy/checks/list.html
+
+---
+Checks: '-*,cppcoreguidelines-*,performance-*,modernize-*,readability-*,-modernize-use-trailing-return-type'
+HeaderFilterRegex: '.*'

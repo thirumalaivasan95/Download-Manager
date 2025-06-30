@@ -9,11 +9,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# Enable Qt's AUTOMOC for meta-object code generation
-set(CMAKE_AUTOMOC ON)
-
 # Find required packages
-find_package(Qt6 COMPONENTS Core Gui Widgets Network Concurrent REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Widgets Network Concurrent REQUIRED)
 find_package(CURL REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
@@ -79,25 +76,55 @@ set(HEADERS
     include/utils/FileUtils.h
 )
 
-# Resources file
-set(RESOURCES resources/resources.qrc)
-qt6_add_resources(QT_RESOURCES ${RESOURCES})
+# Platform-specific settings
+if (WIN32)
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
+    set(CMAKE_AUTOUIC ON)
+    # Windows: adjust resource handling if needed
+    set(RESOURCES resources/resources.qrc)
+    qt5_add_resources(QT_RESOURCES ${RESOURCES})
+else()
+    # Linux/Unix
+    set(RESOURCES resources/resources.qrc)
+    qt5_add_resources(QT_RESOURCES ${RESOURCES})
+endif()
 
 # Set up target
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${QT_RESOURCES})
+if (WIN32)
+    add_executable(${PROJECT_NAME} WIN32 ${SOURCES} ${HEADERS} ${QT_RESOURCES})
+else()
+    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${QT_RESOURCES})
+endif()
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
-    Qt6::Network
-    Qt6::Concurrent
-    ${CURL_LIBRARIES}
-    ${OPENSSL_LIBRARIES}
-    Threads::Threads
-    ${JSONCPP_LIBRARIES}
-)
+if (WIN32)
+    target_link_libraries(${PROJECT_NAME}
+        Qt5::Core
+        Qt5::Gui
+        Qt5::Widgets
+        Qt5::Network
+        Qt5::Concurrent
+        ws2_32
+        crypt32
+        ${CURL_LIBRARIES}
+        ${OPENSSL_LIBRARIES}
+        Threads::Threads
+        ${JSONCPP_LIBRARIES}
+    )
+else()
+    target_link_libraries(${PROJECT_NAME}
+        Qt5::Core
+        Qt5::Gui
+        Qt5::Widgets
+        Qt5::Network
+        Qt5::Concurrent
+        ${CURL_LIBRARIES}
+        ${OPENSSL_LIBRARIES}
+        Threads::Threads
+        ${JSONCPP_LIBRARIES}
+    )
+endif()
 
 # Check for GCC version and link stdc++fs if needed for filesystem support
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

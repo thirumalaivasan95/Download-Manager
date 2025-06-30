@@ -3,7 +3,7 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: MSBuild
+name: CI Feature Matrix
 
 on:
   push:
@@ -11,34 +11,140 @@ on:
   pull_request:
     branches: [ "main" ]
 
-env:
-  # Path to the solution file relative to the root of the project.
-  SOLUTION_FILE_PATH: .
-
-  # Configuration type to build.
-  # You can convert this to a build matrix if you need coverage of multiple configuration types.
-  # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-  BUILD_CONFIGURATION: Release
-
-permissions:
-  contents: read
-
 jobs:
-  build:
-    runs-on: windows-latest
-
+  build-matrix:
+    name: Build and Test (${{ matrix.os }} ${{ matrix.build_type }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        build_type: [Debug, Release]
+    env:
+      BUILD_TYPE: ${{ matrix.build_type }}
+      QT_VERSION: '5.15.2'
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.2
+      # Removed all manual Qt installs and aqtinstall logic
+      # Unified Qt installation for all platforms
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: ${{ runner.os == 'Linux' && 'linux' || runner.os == 'Windows' && 'windows' || 'mac' }}
+          target: 'desktop'
+          arch: ${{ runner.os == 'Linux' && 'gcc_64' || runner.os == 'Windows' && 'win64_msvc2019_64' || 'clang_64' }}
+          dir: '${{ github.workspace }}/qt/'
+          modules: ${{ runner.os == 'macOS' && 'qtcharts qtwebengine' || 'qtcharts qtwebengine qttools' }}
 
-    - name: Restore NuGet packages
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: nuget restore ${{env.SOLUTION_FILE_PATH}}
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v3
 
-    - name: Build
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      # Add additional options to the MSBuild command line here (like platform or verbosity level).
-      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjsoncpp-dev
+          if [ $? -ne 0 ]; then
+            echo "Failed to install dependencies. Check package availability."
+            exit 1
+          fi
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install curl openssl jsoncpp || { echo "Failed to install dependencies via brew."; exit 1; }
+
+      - name: Debug CMake Configuration
+        run: |
+          echo "CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}"
+          echo "CMAKE_PREFIX_PATH (env): ${{ env.CMAKE_PREFIX_PATH }}"
+          echo "Qt5_DIR=${Qt5_DIR}"
+          echo "Checking for Qt5Config.cmake in ${{ env.CMAKE_PREFIX_PATH }}..."
+          find "${{ env.CMAKE_PREFIX_PATH }}" -name Qt5Config.cmake || echo "Qt5Config.cmake not found."
+
+      - name: Validate CMake Paths
+        run: |
+          echo "CMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH }}"
+          echo "Qt5_DIR=${{ env.Qt5_DIR }}"
+          if [ -z "${{ env.CMAKE_PREFIX_PATH }}" ] || [ ! -d "${{ env.CMAKE_PREFIX_PATH }}" ]; then
+            echo "Error: CMAKE_PREFIX_PATH is invalid or not set correctly."
+            if [ "${{ runner.os }}" = "macOS" ]; then
+              echo "Contents of $(brew --prefix qt@5):"
+              ls -l $(brew --prefix qt@5) || echo "Directory not found"
+              echo "Contents of ${{ env.CMAKE_PREFIX_PATH }}:"
+              ls -l ${{ env.CMAKE_PREFIX_PATH }} || echo "Directory not found"
+            else
+              echo "Contents of ${{ env.CMAKE_PREFIX_PATH }}:"
+              ls -l ${{ env.CMAKE_PREFIX_PATH }} || echo "Directory not found"
+            fi
+            exit 1
+          fi
+          # Check for Qt5Config.cmake
+          if ! find "${{ env.CMAKE_PREFIX_PATH }}" -name Qt5Config.cmake | grep -q Qt5Config.cmake; then
+            echo "Error: Qt5Config.cmake not found in CMAKE_PREFIX_PATH."
+            find "${{ env.CMAKE_PREFIX_PATH }}" -name Qt5*cmake || true
+            exit 1
+          fi
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_PREFIX_PATH="${{ env.CMAKE_PREFIX_PATH || env.Qt5_DIR }}"
+          cmake_exit_code=$?
+          if [ $cmake_exit_code -ne 0 ]; then
+            echo "CMake configuration failed. Printing CMakeError.log:"
+            cat build/CMakeFiles/CMakeError.log || echo "No CMakeError.log found."
+            exit $cmake_exit_code
+          fi
+
+      - name: Build
+        run: |
+          cmake --build build --config ${{ env.BUILD_TYPE }} --verbose
+          build_exit_code=$?
+          if [ $build_exit_code -ne 0 ]; then
+            echo "Build failed. Printing CMakeError.log:"
+            cat build/CMakeFiles/CMakeError.log || echo "No CMakeError.log found."
+            exit $build_exit_code
+          fi
+
+      - name: Debug Build Directory
+        run: ls -l build
+
+      - name: Run tests with verbose output
+        run: ctest --test-dir build --output-on-failure --verbose -C ${{ env.BUILD_TYPE }}
+        continue-on-error: true
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ matrix.os }}-${{ matrix.build_type }}
+          path: build/Testing/Temporary/LastTest.log
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.os }}-${{ matrix.build_type }}
+          path: build/
+
+  format-check:
+    name: Check Code Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+      - name: Run clang-format
+        run: |
+          find . -regex '.*\.[ch]pp' -exec clang-format --dry-run --Werror {} +
+
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cppcheck
+        run: sudo apt-get update && sudo apt-get install -y cppcheck
+      - name: Run cppcheck
+        run: cppcheck --enable=all --inconclusive --error-exitcode=1 --std=c++17 --suppress=missingIncludeSystem .
